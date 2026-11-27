@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>加密貨幣起漲點四維共振掃描雷達 | Crypto 4D Breakout & Accumulation Radar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            quant: {
+              bg: '#070b14',
+              panel: '#0f172a',
+              card: '#131c31',
+              border: '#1e293b',
+              accent: '#10b981',
+              warn: '#f59e0b',
+              danger: '#ef4444',
+              cyan: '#06b6d4'
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #070b14;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0b1120; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .drawer-enter { animation: slideInRight 0.22s ease-out forwards; }
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0.4; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .pulse-dot {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { color: #f8fafc; background-color: rgba(30, 41, 59, 0.6); }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+
+  <!-- ==================== 頂部控制台 (Header & Controls) ==================== -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/90 bg-[#070b14]/95 backdrop-blur-md">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3">
+      <!-- Row 1: Brand & Market Context -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/70">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-100">加密貨幣起漲點四維共振掃描雷達</h1>
+              <span id="modeBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                Binance 即時數據
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Wyckoff 威科夫結構 × 波動率壓縮 × 現貨 CVD / OI 費率 × 對 BTC 相對強弱</p>
+          </div>
+        </div>
+
+        <!-- Market Context Bar -->
+        <div class="flex flex-wrap items-center gap-3 text-xs bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-1.5">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">BTC 現價</span>
+            <span id="btcPriceDisplay" class="font-mono font-semibold text-slate-100">--</span>
+            <span id="btcChangeDisplay" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">--</span>
+          </div>
+          <span class="text-slate-700">|</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">大盤結構</span>
+            <span id="btcTrendDisplay" class="font-medium text-slate-300">待掃描</span>
+          </div>
+          <span class="text-slate-700">|</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">全市場平均費率</span>
+            <span id="avgFundingDisplay" class="font-mono font-medium text-slate-300">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-3">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Timeframe -->
+          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+            <button data-tf="4h" class="tf-btn px-3 py-1.5 rounded-md font-semibold transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">4H 波段起漲</button>
+            <button data-tf="1d" class="tf-btn px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 transition border border-transparent">1D 大級別吸籌</button>
+          </div>
+
+          <!-- Scan Scope -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs">
+            <label for="scopeSelect" class="text-slate-400">掃描範圍</label>
+            <select id="scopeSelect" class="bg-transparent text-slate-100 font-medium focus:outline-none cursor-pointer">
+              <option value="50" class="bg-slate-900" selected>成交額 Top 50</option>
+              <option value="100" class="bg-slate-900">成交額 Top 100</option>
+              <option value="150" class="bg-slate-900">成交額 Top 150</option>
+            </select>
+          </div>
+
+          <!-- Single Coin Instant Lookup -->
+          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg overflow-hidden focus-within:border-cyan-500/60 transition">
+            <input id="singleCoinInput" type="text" placeholder="單幣快查 (如 SOL, SUI)" class="w-40 sm:w-44 bg-transparent px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none uppercase" />
+            <button id="singleCoinBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-cyan-300 border-l border-slate-700 transition">分析</button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="scanBtn" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 transition">
+            <svg id="scanIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span id="scanBtnText">開始掃描</span>
+          </button>
+
+          <button id="demoModeBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition" title="若網路受限或欲離線預覽介面，可切換至模擬數據">
+            <span>模擬數據 (Demo)</span>
+          </button>
+
+          <button id="exportCsvBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition disabled:opacity-40" disabled>
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>匯出高分 CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="progressContainer" class="hidden mt-3">
+        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+          <span id="progressText">準備連線 Binance 公開行情 API...</span>
+          <span id="progressPct" class="font-mono text-emerald-400">0%</span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="progressBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 錯誤提示橫幅 (Error Banner) ==================== -->
+  <div id="errorBanner" class="hidden max-w-[1600px] mx-auto px-4 sm:px-6 mt-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-xs">
+      <div class="flex items-start gap-2.5">
+        <svg class="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <p class="font-semibold text-red-300">無法順利取得 Binance 即時數據</p>
+          <p id="errorBannerDetail" class="text-red-200/80 mt-0.5">可能是瀏覽器沙盒環境限制、CORS 封鎖或網路連線異常。您可以點擊右側按鈕載入內建的擬真模擬數據來完整操作介面與圖表。</p>
+        </div>
+      </div>
+      <button id="bannerDemoBtn" class="px-3.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-red-100 font-semibold transition shrink-0">
+        切換至模擬測試數據 (Demo Mode)
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 主內容區 ==================== -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- 頂部 KPI 摘要卡片 (4 張) -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400">已掃描標的數</p>
+          <p id="kpiScanned" class="text-2xl font-mono font-bold text-slate-100 mt-1">0</p>
+          <p id="kpiScanTime" class="text-[11px] text-slate-500 mt-0.5">尚未執行掃描</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-800/80 border border-slate-700 flex items-center justify-center text-cyan-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+      </div>
+
+      <div class="bg-[#0f172a] border border-emerald-500/25 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400">強共振起漲訊號 (≥ 75 分)</p>
+          <p id="kpiStrong" class="text-2xl font-mono font-bold text-emerald-400 mt-1">0</p>
+          <p class="text-[11px] text-emerald-500/70 mt-0.5">四維高度同步標的</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+      </div>
+
+      <div class="bg-[#0f172a] border border-amber-500/25 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400">左側 Spring 伏擊訊號</p>
+          <p id="kpiSpring" class="text-2xl font-mono font-bold text-amber-400 mt-1">0</p>
+          <p class="text-[11px] text-amber-500/70 mt-0.5">破底掃止損並收回區間</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h4l3 8 4-16 3 8h4"/></svg>
+        </div>
+      </div>
+
+      <div class="bg-[#0f172a] border border-cyan-500/25 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400">右側 LPS 突破回踩訊號</p>
+          <p id="kpiLps" class="text-2xl font-mono font-bold text-cyan-400 mt-1">0</p>
+          <p class="text-[11px] text-cyan-500/70 mt-0.5">SOS 帶量突破後縮量回測</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 快速濾鏡列與列表搜尋 -->
+    <section class="bg-[#0f172a] border border-slate-800 rounded-xl p-3.5 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div id="filterPills" class="flex flex-wrap items-center gap-1.5 text-xs">
+          <button data-filter="all" class="filter-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition">全部</button>
+          <button data-filter="strong" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">≥ 75 分強共振</button>
+          <button data-filter="spring" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">僅看 Spring</button>
+          <button data-filter="lps" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">僅看 LPS</button>
+          <button data-filter="negFunding" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">負費率軋空</button>
+          <button data-filter="squeeze" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">波動率極致壓縮</button>
+          <button data-filter="cvdDiv" class="filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition">現貨 CVD 背離</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input id="tableSearchInput" type="text" placeholder="篩選表格幣種..." class="w-36 sm:w-44 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/60" />
+          <span id="visibleCountBadge" class="text-xs font-mono text-slate-400">顯示 0 筆</span>
+        </div>
+      </div>
+
+      <!-- 主掃描資料表 -->
+      <div class="overflow-x-auto rounded-lg border border-slate-800">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-900/95 text-slate-400 border-b border-slate-800">
+              <th class="sortable px-3.5 py-3 font-semibold whitespace-nowrap" data-sort="symbol">幣種 <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap text-right" data-sort="price">最新價 / 24H <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3.5 py-3 font-semibold whitespace-nowrap min-w-[150px]" data-sort="totalScore">四維總分 <span class="sort-ind text-[10px]">▼</span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap" data-sort="wyckoffScore">威科夫結構 (30) <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap" data-sort="bbwPercentile">BBW 壓縮 (20) <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap" data-sort="spotCvdScore">現貨 CVD 狀態 <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap" data-sort="fundingRate">OI 變化 / 費率 <span class="sort-ind text-[10px]"></span></th>
+              <th class="sortable px-3 py-3 font-semibold whitespace-nowrap" data-sort="rsScore">對 BTC 強弱 (20) <span class="sort-ind text-[10px]"></span></th>
+              <th class="px-3.5 py-3 font-semibold whitespace-nowrap text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="scannerTableBody" class="divide-y divide-slate-800/70 bg-[#0b1120]/60">
+            <tr>
+              <td colspan="9" class="px-6 py-14 text-center text-slate-400">
+                <div class="flex flex-col items-center gap-2">
+                  <p class="text-sm font-medium text-slate-300">點擊上方「開始掃描」抓取 Binance 即時行情</p>
+                  <p class="text-xs text-slate-500">或點擊「模擬數據 (Demo)」立即預覽四維共振評分與互動雙圖表</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 頁尾免責說明 -->
+    <footer class="text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2 pt-1 pb-6">
+      <span>演算法維度：威科夫量價結構 (30%) + 波動率壓縮 (20%) + 現貨 CVD / OI 費率 (30%) + 對 BTC 相對強弱 (20%)</span>
+      <span>免責聲明：本系統僅供量化數據分析與技術結構研究，不構成任何投資建議，請嚴格執行風險管理。</span>
+    </footer>
+  </main>
+
+  <!-- ==================== 互動式詳情側邊抽屜 (Detail Drawer) ==================== -->
+  <div id="drawerBackdrop" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-xs transition-opacity"></div>
+  <aside id="detailDrawer" class="hidden fixed top-0 right-0 z-50 h-full w-full max-w-4xl bg-[#0b1120] border-l border-slate-800 shadow-2xl overflow-y-auto drawer-enter">
+    <div class="sticky top-0 z-20 flex items-center justify-between px-5 py-3.5 bg-[#0b1120]/95 backdrop-blur border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 id="drawerSymbol" class="text-lg font-bold font-mono text-slate-100">--</h2>
+            <span id="drawerTierBadge" class="px-2 py-0.5 text-[11px] font-semibold rounded-full">--</span>
+            <span id="drawerTfBadge" class="px-2 py-0.5 text-[11px] font-mono rounded bg-slate-800 text-slate-300 border border-slate-700">4H</span>
+          </div>
+          <div class="flex items-center gap-3 mt-0.5 text-xs">
+            <span id="drawerPrice" class="font-mono font-semibold text-slate-200">--</span>
+            <span id="drawerChange" class="font-mono">--</span>
+            <span id="drawerVol" class="text-slate-400">24H額: --</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="text-right mr-2">
+          <div class="text-[10px] text-slate-400">四維共振總分</div>
+          <div id="drawerTotalScore" class="text-xl font-mono font-bold text-emerald-400">-- / 100</div>
+        </div>
+        <button id="closeDrawerBtn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="關閉 (ESC)">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-5 space-y-5">
+      <!-- 互動式雙圖表區塊 -->
+      <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-semibold text-slate-200">主圖：K 線 + EMA + 布林帶 + 威科夫區間</span>
+            <span class="inline-flex items-center gap-1 text-[11px] text-cyan-300"><span class="w-2.5 h-0.5 bg-cyan-400 inline-block"></span>EMA20</span>
+            <span class="inline-flex items-center gap-1 text-[11px] text-amber-300"><span class="w-2.5 h-0.5 bg-amber-400 inline-block"></span>EMA50</span>
+            <span class="inline-flex items-center gap-1 text-[11px] text-purple-300"><span class="w-2.5 h-0.5 bg-purple-400 inline-block"></span>EMA120</span>
+            <span class="inline-flex items-center gap-1 text-[11px] text-slate-400"><span class="w-2.5 h-0.5 bg-sky-400/60 inline-block"></span>BB(20,2)</span>
+          </div>
+          <div class="flex items-center gap-2 text-[11px]">
+            <label class="inline-flex items-center gap-1 cursor-pointer text-slate-300">
+              <input id="toggleEma" type="checkbox" checked class="accent-emerald-500 rounded" /> EMA
+            </label>
+            <label class="inline-flex items-center gap-1 cursor-pointer text-slate-300">
+              <input id="toggleBb" type="checkbox" checked class="accent-emerald-500 rounded" /> 布林帶
+            </label>
+          </div>
+        </div>
+
+        <div id="mainChartContainer" class="w-full h-[320px] rounded-lg overflow-hidden bg-[#0a0f1d] border border-slate-800/80 relative"></div>
+
+        <div class="flex items-center justify-between text-xs pt-1">
+          <span class="font-semibold text-cyan-300">副圖：現貨 CVD (Spot Cumulative Volume Delta 近似序列)</span>
+          <span id="drawerCvdSummary" class="text-[11px] text-slate-400">--</span>
+        </div>
+        <div id="cvdChartContainer" class="w-full h-[145px] rounded-lg overflow-hidden bg-[#0a0f1d] border border-slate-800/80 relative"></div>
+      </div>
+
+      <!-- 四維得分拆解 & 風險規劃 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- 四維得分拆解儀表 (7 cols) -->
+        <div class="lg:col-span-7 bg-[#0f172a] border border-slate-800 rounded-xl p-4 space-y-4">
+          <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <span class="w-1.5 h-4 rounded bg-emerald-400 inline-block"></span>
+            四維量化得分拆解與診斷報告
+          </h3>
+
+          <div id="dimensionBars" class="space-y-3 text-xs">
+            <!-- Dynamically rendered -->
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <p class="text-xs font-semibold text-slate-300">系統白話診斷</p>
+            <ul id="diagnosticList" class="space-y-1.5 text-xs leading-relaxed">
+              <!-- Dynamically rendered -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- 參考風險規劃卡片 (5 cols) -->
+        <div class="lg:col-span-5 bg-[#0f172a] border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-4">
+          <div class="space-y-3.5">
+            <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <span class="w-1.5 h-4 rounded bg-amber-400 inline-block"></span>
+              結構位階與參考風險規劃
+            </h3>
+
+            <div class="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
+              <div class="text-[11px] text-slate-400">建議觀察策略</div>
+              <div id="planStrategy" class="text-sm font-bold text-emerald-300">--</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+                <div class="text-[11px] text-slate-400">區間上緣 (RangeHigh)</div>
+                <div id="planRangeHigh" class="font-mono font-semibold text-slate-100 mt-0.5">--</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+                <div class="text-[11px] text-slate-400">區間下緣 (RangeLow)</div>
+                <div id="planRangeLow" class="font-mono font-semibold text-slate-100 mt-0.5">--</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30">
+                <div class="text-[11px] text-red-300">建議結構止損價</div>
+                <div id="planStopLoss" class="font-mono font-bold text-red-300 mt-0.5">--</div>
+                <div id="planRiskPct" class="text-[10px] font-mono text-red-400/80 mt-0.5">--</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                <div class="text-[11px] text-emerald-300">第一目標壓力位</div>
+                <div id="planTarget1" class="font-mono font-bold text-emerald-300 mt-0.5">--</div>
+                <div id="planRewardPct" class="text-[10px] font-mono text-emerald-400/80 mt-0.5">--</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] text-slate-400">預估風險報酬比 (R:R)</div>
+                <div class="text-[10px] text-slate-500">以現價至止損 / 第一目標估算</div>
+              </div>
+              <div id="planRR" class="text-lg font-mono font-bold text-amber-300">--</div>
+            </div>
+
+            <!-- 衍生品與相對強弱速覽 -->
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div class="px-2.5 py-2 rounded bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block">資金費率 / OI 變化</span>
+                <span id="planDerivatives" class="font-mono text-slate-200 font-medium">--</span>
+              </div>
+              <div class="px-2.5 py-2 rounded bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block">ALT/BTC 14期超額報酬</span>
+                <span id="planRsMom" class="font-mono text-slate-200 font-medium">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-200/75 leading-relaxed">
+            <strong class="text-amber-300">風險提示：</strong>以上價位係由演算法依據近期 K 線高低點與區間結構自動計算，僅供量化研究與覆盤參考，非投資建議。進場前請務必考量大盤 BTC 波動與個人倉位承受度。
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== JAVASCRIPT 核心程式 ==================== -->
+  <script>
+    'use strict';
+
+    /* =========================================================================
+     * 1. CONFIG — 全域設定與常數
+     * ========================================================================= */
+    const CONFIG = {
+      SPOT_BASE_URL: 'https://api.binance.com',
+      FUTURES_BASE_URL: 'https://fapi.binance.com',
+      KLINE_LIMIT: 150,
+      BATCH_CONCURRENCY: 5,
+      BATCH_DELAY_MS: 150,
+      REQUEST_TIMEOUT_MS: 10000,
+      EXCLUDED_BASE_ASSETS: new Set([
+        'USDC', 'FDUSD', 'TUSD', 'BUSD', 'USDP', 'DAI', 'EUR', 'AEUR', 'EURI',
+        'USDE', 'USD1', 'XUSD', 'BFUSD', 'USTC', 'USDS', 'RLUSD', 'PYUSD',
+        'GBP', 'AUD', 'TRY', 'BRL', 'RUB', 'UAH', 'BIDR', 'IDRT', 'NGN',
+        'SUSD', 'GUSD', 'FRAX', 'LUSD', 'USDJ', 'CUSD', 'PAX', 'WBTC'
+      ]),
+      LEVERAGED_SUFFIXES: ['UP', 'DOWN', 'BULL', 'BEAR', '3L', '3S', '5L', '5S']
+    };
+
+    const APP_STATE = {
+      timeframe: '4h',
+      scope: 50,
+      isDemoMode: false,
+      isScanning: false,
+      abortController: null,
+      activeFilter: 'all',
+      searchQuery: '',
+      sortBy: 'totalScore',
+      sortDir: 'desc',
+      btcKlines: [],
+      fundingMap: new Map(),
+      avgFundingRate: null,
+      results: [],
+      selectedSymbol: null,
+      charts: {
+        main: null,
+        cvd: null,
+        resizeObserver: null,
+        emaSeries: [],
+        bbSeries: []
+      }
+    };
+
+    /* =========================================================================
+     * 2. API LAYER — Binance 公開行情串接、節流佇列與 Demo 模擬數據產生器
+     * ========================================================================= */
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function fetchJsonWithTimeout(url, signal, timeoutMs = CONFIG.REQUEST_TIMEOUT_MS) {
+      const localCtrl = new AbortController();
+      const timer = setTimeout(() => localCtrl.abort(), timeoutMs);
+      const onParentAbort = () => localCtrl.abort();
+      if (signal) {
+        if (signal.aborted) {
+          clearTimeout(timer);
+          throw new DOMException('Aborted', 'AbortError');
+        }
+        signal.addEventListener('abort', onParentAbort, { once: true });
+      }
+      try {
+        const res = await fetch(url, { signal: localCtrl.signal });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} (${res.statusText})`);
+        }
+        return await res.json();
+      } finally {
+        clearTimeout(timer);
+        if (signal) signal.removeEventListener('abort', onParentAbort);
+      }
+    }
+
+    function isExcludedSymbol(symbol) {
+      if (!symbol || !symbol.endsWith('USDT')) return true;
+      const base = symbol.slice(0, -4);
+      if (!base || CONFIG.EXCLUDED_BASE_ASSETS.has(base)) return true;
+      for (const suffix of CONFIG.LEVERAGED_SUFFIXES) {
+        if (base.length > suffix.length + 1 && base.endsWith(suffix)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function parseKlines(raw) {
+      if (!Array.isArray(raw)) return [];
+      let cumulativeCvd = 0;
+      const parsed = [];
+      for (const k of raw) {
+        const openTime = Number(k[0]);
+        const open = Number(k[1]);
+        const high = Number(k[2]);
+        const low = Number(k[3]);
+        const close = Number(k[4]);
+        const volume = Number(k[5]);
+        const quoteVolume = Number(k[7]);
+        const takerBuyVol = Number(k[9]);
+        if (!Number.isFinite(close) || close <= 0) continue;
+        const delta = Number.isFinite(takerBuyVol) && Number.isFinite(volume)
+          ? (2 * takerBuyVol - volume)
+          : 0;
+        cumulativeCvd += delta;
+        parsed.push({
+          time: Math.floor(openTime / 1000),
+          open,
+          high,
+          low,
+          close,
+          volume: Number.isFinite(volume) ? volume : 0,
+          quoteVolume: Number.isFinite(quoteVolume) ? quoteVolume : 0,
+          takerBuyVol: Number.isFinite(takerBuyVol) ? takerBuyVol : 0,
+          delta,
+          cvd: cumulativeCvd
+        });
+      }
+      return parsed;
+    }
+
+    async function fetchTopUsdtTickers(limit, signal) {
+      const url = `${CONFIG.SPOT_BASE_URL}/api/v3/ticker/24hr`;
+      const data = await fetchJsonWithTimeout(url, signal, 15000);
+      const filtered = data
+        .filter(t => !isExcludedSymbol(t.symbol) && Number(t.quoteVolume) > 0 && Number(t.lastPrice) > 0)
+        .sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+      return filtered.slice(0, limit).map(t => ({
+        symbol: t.symbol,
+        price: Number(t.lastPrice),
+        change24h: Number(t.priceChangePercent),
+        quoteVolume24h: Number(t.quoteVolume)
+      }));
+    }
+
+    async function fetchSingleTicker(symbol, signal) {
+      const url = `${CONFIG.SPOT_BASE_URL}/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`;
+      const t = await fetchJsonWithTimeout(url, signal);
+      return {
+        symbol: t.symbol,
+        price: Number(t.lastPrice),
+        change24h: Number(t.priceChangePercent),
+        quoteVolume24h: Number(t.quoteVolume)
+      };
+    }
+
+    async function fetchSpotKlines(symbol, interval, signal) {
+      const url = `${CONFIG.SPOT_BASE_URL}/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${CONFIG.KLINE_LIMIT}`;
+      const raw = await fetchJsonWithTimeout(url, signal);
+      return parseKlines(raw);
+    }
+
+    async function fetchFundingMap(signal) {
+      const map = new Map();
+      let sum = 0;
+      let count = 0;
+      try {
+        const url = `${CONFIG.FUTURES_BASE_URL}/fapi/v1/premiumIndex`;
+        const data = await fetchJsonWithTimeout(url, signal, 12000);
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            if (!item.symbol || !item.symbol.endsWith('USDT')) continue;
+            const fr = Number(item.lastFundingRate);
+            if (Number.isFinite(fr)) {
+              map.set(item.symbol, fr);
+              sum += fr;
+              count++;
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        console.warn('無法載入永續合約資金費率，將僅以現貨模式繼續：', err.message);
+      }
+      return {
+        map,
+        avgFundingRate: count > 0 ? sum / count : null
+      };
+    }
+
+    async function fetchOpenInterestHist(symbol, interval, signal) {
+      const period = interval === '1d' ? '1d' : '4h';
+      const url = `${CONFIG.FUTURES_BASE_URL}/futures/data/openInterestHist?symbol=${encodeURIComponent(symbol)}&period=${period}&limit=24`;
+      try {
+        const data = await fetchJsonWithTimeout(url, signal, 8000);
+        if (!Array.isArray(data) || data.length < 4) return null;
+        return data.map(d => ({
+          timestamp: Number(d.timestamp),
+          oi: Number(d.sumOpenInterest),
+          oiValue: Number(d.sumOpenInterestValue)
+        })).filter(d => Number.isFinite(d.oi) && d.oi > 0);
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        return null;
+      }
+    }
+
+    /* ---------------- Demo Mode 擬真模擬數據生成器 ---------------- */
+    function seededRandom(seed) {
+      let s = seed % 2147483647;
+      if (s <= 0) s += 2147483646;
+      return function () {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    function generateDemoDataset(timeframe) {
+      const stepSec = timeframe === '1d' ? 86400 : 14400;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const alignedNow = nowSec - (nowSec % stepSec);
+      const n = CONFIG.KLINE_LIMIT;
+
+      // 生成 BTC 基準 K 線（溫和震盪偏強）
+      const btcRng = seededRandom(20261127);
+      const btcKlines = [];
+      let btcPrice = 88500;
+      let btcCvd = 0;
+      for (let i = 0; i < n; i++) {
+        const t = alignedNow - (n - 1 - i) * stepSec;
+        const drift = i > 110 ? 0.0007 : -0.0002;
+        const shock = (btcRng() - 0.49) * 0.018;
+        const open = btcPrice;
+        const close = Math.max(1000, open * (1 + drift + shock));
+        const high = Math.max(open, close) * (1 + btcRng() * 0.009);
+        const low = Math.min(open, close) * (1 - btcRng() * 0.009);
+        const volume = 3200 + btcRng() * 2800;
+        const takerRatio = close >= open ? 0.52 + btcRng() * 0.08 : 0.43 + btcRng() * 0.07;
+        const takerBuyVol = volume * takerRatio;
+        const delta = 2 * takerBuyVol - volume;
+        btcCvd += delta;
+        btcKlines.push({
+          time: t, open, high, low, close, volume,
+          quoteVolume: volume * close, takerBuyVol, delta, cvd: btcCvd
+        });
+        btcPrice = close;
+      }
+
+      // 各種市場結構原型，確保每個濾鏡與情境都能真實體驗
+      const presets = [
+        { symbol: 'SUIUSDT', basePrice: 3.42, archetype: 'spring_perfect', funding: -0.00018, oiChg: 14.2, vol24h: 890e6, hasFutures: true },
+        { symbol: 'SOLUSDT', basePrice: 218.5, archetype: 'lps_perfect', funding: -0.00005, oiChg: 11.8, vol24h: 2450e6, hasFutures: true },
+        { symbol: 'AAVEUSDT', basePrice: 285.0, archetype: 'spring_perfect', funding: 0.00004, oiChg: 18.5, vol24h: 410e6, hasFutures: true },
+        { symbol: 'TAOUSDT', basePrice: 540.0, archetype: 'lps_perfect', funding: -0.00012, oiChg: 9.6, vol24h: 360e6, hasFutures: true },
+        { symbol: 'PENDLEUSDT', basePrice: 5.15, archetype: 'spring_squeeze', funding: -0.00022, oiChg: 12.4, vol24h: 195e6, hasFutures: true },
+        { symbol: 'LINKUSDT', basePrice: 22.8, archetype: 'lps_good', funding: 0.00008, oiChg: 8.1, vol24h: 620e6, hasFutures: true },
+        { symbol: 'INJUSDT', basePrice: 26.4, archetype: 'accum_cvd_div', funding: -0.00009, oiChg: 10.3, vol24h: 280e6, hasFutures: true },
+        { symbol: 'ONDOUSDT', basePrice: 1.62, archetype: 'accum_squeeze', funding: 0.00003, oiChg: 6.7, vol24h: 310e6, hasFutures: true },
+        { symbol: 'NEARUSDT', basePrice: 6.18, archetype: 'spring_moderate', funding: 0.00009, oiChg: 5.4, vol24h: 340e6, hasFutures: true },
+        { symbol: 'RENDERUSDT', basePrice: 8.92, archetype: 'lps_good', funding: 0.00006, oiChg: 15.2, vol24h: 270e6, hasFutures: true },
+        { symbol: 'AVAXUSDT', basePrice: 41.2, archetype: 'accum_cvd_div', funding: 0.00005, oiChg: 4.9, vol24h: 490e6, hasFutures: true },
+        { symbol: 'ETHUSDT', basePrice: 3420, archetype: 'accum_squeeze', funding: 0.00008, oiChg: 7.2, vol24h: 4200e6, hasFutures: true },
+        { symbol: 'BTCUSDT', basePrice: btcKlines[n - 1].close, archetype: 'btc_ref', funding: 0.00007, oiChg: 5.1, vol24h: 6800e6, hasFutures: true },
+        { symbol: 'ARBUSDT', basePrice: 0.94, archetype: 'accum_neutral', funding: 0.0001, oiChg: 2.1, vol24h: 260e6, hasFutures: true },
+        { symbol: 'OPUSDT', basePrice: 2.15, archetype: 'accum_neutral', funding: 0.00012, oiChg: -1.8, vol24h: 190e6, hasFutures: true },
+        { symbol: 'SEIUSDT', basePrice: 0.56, archetype: 'spring_moderate', funding: -0.00004, oiChg: 11.1, vol24h: 220e6, hasFutures: true },
+        { symbol: 'APTUSDT', basePrice: 11.4, archetype: 'accum_squeeze', funding: 0.00009, oiChg: 6.3, vol24h: 255e6, hasFutures: true },
+        { symbol: 'FETUSDT', basePrice: 1.78, archetype: 'accum_cvd_div', funding: 0.00002, oiChg: 9.2, vol24h: 230e6, hasFutures: true },
+        { symbol: 'JUPUSDT', basePrice: 1.12, archetype: 'lps_moderate', funding: 0.00011, oiChg: 13.0, vol24h: 210e6, hasFutures: true },
+        { symbol: 'ENAUSDT', basePrice: 0.88, archetype: 'overheated_fakeout', funding: 0.00072, oiChg: 42.5, vol24h: 510e6, hasFutures: true },
+        { symbol: 'PEPEUSDT', basePrice: 0.0000192, archetype: 'overheated_fakeout', funding: 0.00065, oiChg: 39.0, vol24h: 1350e6, hasFutures: true },
+        { symbol: 'WIFUSDT', basePrice: 2.95, archetype: 'distribution', funding: 0.00058, oiChg: 36.2, vol24h: 670e6, hasFutures: true },
+        { symbol: 'DOGEUSDT', basePrice: 0.365, archetype: 'accum_neutral', funding: 0.00024, oiChg: 8.8, vol24h: 2100e6, hasFutures: true },
+        { symbol: 'XRPUSDT', basePrice: 1.48, archetype: 'distribution', funding: 0.00048, oiChg: 28.4, vol24h: 1800e6, hasFutures: true },
+        { symbol: 'ADAUSDT', basePrice: 0.89, archetype: 'accum_neutral', funding: 0.00015, oiChg: 3.5, vol24h: 740e6, hasFutures: true },
+        { symbol: 'TIAUSDT', basePrice: 6.85, archetype: 'downtrend', funding: -0.00006, oiChg: -12.4, vol24h: 185e6, hasFutures: true },
+        { symbol: 'DOTUSDT', basePrice: 7.42, archetype: 'downtrend', funding: 0.00009, oiChg: -6.2, vol24h: 210e6, hasFutures: true },
+        { symbol: 'UNIUSDT', basePrice: 11.9, archetype: 'accum_squeeze', funding: 0.00007, oiChg: 4.4, vol24h: 305e6, hasFutures: true },
+        { symbol: 'RAYUSDT', basePrice: 4.85, archetype: 'spring_moderate', funding: null, oiChg: null, vol24h: 165e6, hasFutures: false },
+        { symbol: 'RUNEUSDT', basePrice: 5.62, archetype: 'downtrend', funding: 0.0001, oiChg: -8.9, vol24h: 145e6, hasFutures: true }
+      ];
+
+      const fundingMap = new Map();
+      let fSum = 0, fCnt = 0;
+      const items = presets.map((p, idx) => {
+        if (p.hasFutures && p.funding !== null) {
+          fundingMap.set(p.symbol, p.funding);
+          fSum += p.funding;
+          fCnt++;
+        }
+
+        if (p.archetype === 'btc_ref') {
+          const last = btcKlines[n - 1];
+          const prev24 = btcKlines[Math.max(0, n - (timeframe === '1d' ? 2 : 7))];
+          const chg = ((last.close / prev24.close) - 1) * 100;
+          return {
+            ticker: { symbol: 'BTCUSDT', price: last.close, change24h: chg, quoteVolume24h: p.vol24h },
+            klines: btcKlines,
+            oiHist: buildDemoOi(p.oiChg, alignedNow, stepSec)
+          };
+        }
+
+        const rng = seededRandom(7700 + idx * 131 + (timeframe === '1d' ? 99 : 0));
+        const klines = buildArchetypeKlines(p.basePrice, p.archetype, n, alignedNow, stepSec, rng);
+        const last = klines[n - 1];
+        const prevIdx = Math.max(0, n - (timeframe === '1d' ? 2 : 7));
+        const chg = ((last.close / klines[prevIdx].close) - 1) * 100;
+        return {
+          ticker: { symbol: p.symbol, price: last.close, change24h: chg, quoteVolume24h: p.vol24h },
+          klines,
+          oiHist: p.hasFutures ? buildDemoOi(p.oiChg, alignedNow, stepSec) : null
+        };
+      });
+
+      return {
+        btcKlines,
+        fundingMap,
+        avgFundingRate: fCnt > 0 ? fSum / fCnt : 0.0001,
+        items
+      };
+    }
+
+    function buildDemoOi(oiChgPct, alignedNow, stepSec) {
+      if (oiChgPct === null || oiChgPct === undefined) return null;
+      const arr = [];
+      const startOi = 1000000;
+      const endOi = startOi * (1 + oiChgPct / 100);
+      for (let i = 0; i < 24; i++) {
+        const progress = i / 23;
+        const val = startOi + (endOi - startOi) * progress;
+        arr.push({
+          timestamp: (alignedNow - (23 - i) * stepSec) * 1000,
+          oi: val,
+          oiValue: val * 10
+        });
+      }
+      return arr;
+    }
+
+    function buildArchetypeKlines(basePrice, archetype, n, alignedNow, stepSec, rng) {
+      const klines = [];
+      const rangeLow = basePrice * 0.90;
+      const rangeHigh = basePrice * 1.07;
+      const mid = (rangeLow + rangeHigh) / 2;
+      let price = mid;
+      let cvd = 0;
+
+      for (let i = 0; i < n; i++) {
+        const t = alignedNow - (n - 1 - i) * stepSec;
+        let open = price;
+        let close = price;
+        let high, low;
+        let volMult = 0.8 + rng() * 0.5;
+        let takerRatio = 0.50 + (rng() - 0.5) * 0.08;
+
+        if (archetype === 'spring_perfect' || archetype === 'spring_squeeze' || archetype === 'spring_moderate') {
+          if (i < 60) {
+            // 前期大震盪回落後進入區間
+            const target = mid + Math.sin(i * 0.25) * (rangeHigh - rangeLow) * 0.48;
+            close = open + (target - open) * 0.35 + (rng() - 0.5) * basePrice * 0.04;
+            volMult = 1.1 + rng() * 0.6;
+          } else if (i < n - 8) {
+            // 區間吸籌與波動率收斂
+            const amp = archetype === 'spring_moderate' ? 0.38 : 0.22;
+            const target = (rangeLow + basePrice * 0.04) + Math.sin(i * 0.3) * (rangeHigh - rangeLow) * amp;
+            close = open + (target - open) * 0.3 + (rng() - 0.5) * basePrice * 0.012;
+            volMult = 0.65 + rng() * 0.35;
+            if (i > n - 30) takerRatio = 0.56 + rng() * 0.08; // 現貨偷偷吸籌
+          } else if (i === n - 5) {
+            // Spring 向下插針掃止損並爆量收回
+            open = rangeLow * 1.01;
+            low = rangeLow * 0.948;
+            close = rangeLow * 1.022;
+            high = close * 1.012;
+            volMult = 2.35;
+            takerRatio = 0.68;
+          } else if (i > n - 5 && i < n - 1) {
+            // 縮量回測不破新低
+            const target = rangeLow * 1.028 + (i - (n - 5)) * basePrice * 0.008;
+            close = open + (target - open) * 0.5 + (rng() - 0.5) * basePrice * 0.007;
+            volMult = 0.52 + rng() * 0.18;
+            takerRatio = 0.58 + rng() * 0.06;
+          } else if (i === n - 1) {
+            close = Math.max(open * 1.012, rangeLow * 1.055);
+            volMult = 1.25;
+            takerRatio = 0.64;
+          } else {
+            close = rangeLow * 1.015 + (rng() - 0.5) * basePrice * 0.01;
+            volMult = 0.7;
+            takerRatio = 0.55;
+          }
+        } else if (archetype === 'lps_perfect' || archetype === 'lps_good' || archetype === 'lps_moderate') {
+          if (i < 55) {
+            const target = mid + Math.sin(i * 0.22) * (rangeHigh - rangeLow) * 0.45;
+            close = open + (target - open) * 0.35 + (rng() - 0.5) * basePrice * 0.035;
+            volMult = 1.0 + rng() * 0.5;
+          } else if (i < n - 9) {
+            // 波動率收斂並逐步墊高
+            const target = mid + (i - 55) / (n - 64) * (rangeHigh - mid) * 0.7;
+            close = open + (target - open) * 0.35 + (rng() - 0.5) * basePrice * 0.012;
+            volMult = 0.65 + rng() * 0.3;
+            if (i > n - 30) takerRatio = 0.56 + rng() * 0.07;
+          } else if (i === n - 7) {
+            // SOS 放量突破區間上緣
+            open = rangeHigh * 0.992;
+            close = rangeHigh * 1.058;
+            high = close * 1.015;
+            low = open * 0.995;
+            volMult = 2.4;
+            takerRatio = 0.69;
+          } else if (i > n - 7 && i < n - 1) {
+            // 縮量回踩 RangeHigh 支撐
+            const stepPull = (i - (n - 7)) / 5;
+            const target = rangeHigh * (1.05 - stepPull * 0.038);
+            close = open + (target - open) * 0.55 + (rng() - 0.5) * basePrice * 0.008;
+            volMult = 0.55 + rng() * 0.2;
+            takerRatio = 0.55 + rng() * 0.06;
+          } else if (i === n - 1) {
+            close = rangeHigh * 1.018;
+            volMult = 0.72;
+            takerRatio = 0.62;
+          } else {
+            close = rangeHigh * 0.99;
+            volMult = 0.7;
+          }
+        } else if (archetype === 'accum_cvd_div' || archetype === 'accum_squeeze') {
+          const volScale = archetype === 'accum_squeeze' ? 0.009 : 0.015;
+          if (i < 55) {
+            close = open + (mid - open) * 0.2 + (rng() - 0.5) * basePrice * 0.04;
+          } else {
+            const target = rangeLow * 1.04 + Math.sin(i * 0.28) * (rangeHigh - rangeLow) * 0.22;
+            close = open + (target - open) * 0.3 + (rng() - 0.5) * basePrice * volScale;
+            if (i > n - 25) {
+              // 價格橫盤微跌，但現貨買盤穩健流入
+              close = open * (1 - 0.0004 + (rng() - 0.5) * 0.008);
+              takerRatio = archetype === 'accum_cvd_div' ? 0.61 + rng() * 0.07 : 0.55 + rng() * 0.05;
+            }
+          }
+        } else if (archetype === 'overheated_fakeout') {
+          if (i < n - 15) {
+            close = open + (mid - open) * 0.2 + (rng() - 0.5) * basePrice * 0.03;
+          } else {
+            // 價漲但現貨持續賣出（合約誘多）
+            close = open * (1 + 0.014 + (rng() - 0.4) * 0.015);
+            volMult = 1.6 + rng() * 0.8;
+            takerRatio = 0.37 + rng() * 0.06;
+          }
+        } else if (archetype === 'distribution') {
+          if (i < n - 20) {
+            close = open * (1 + 0.004 + (rng() - 0.48) * 0.025);
+          } else {
+            close = open * (1 + (rng() - 0.55) * 0.03);
+            volMult = 1.5 + rng() * 0.7;
+            takerRatio = 0.41 + rng() * 0.06;
+          }
+        } else if (archetype === 'downtrend') {
+          close = open * (1 - 0.0032 + (rng() - 0.5) * 0.024);
+          volMult = 1.1 + rng() * 0.5;
+          takerRatio = 0.43 + rng() * 0.06;
+        } else {
+          // accum_neutral
+          const target = mid + Math.sin(i * 0.2) * (rangeHigh - rangeLow) * 0.35;
+          close = open + (target - open) * 0.25 + (rng() - 0.5) * basePrice * 0.022;
+        }
+
+        close = Math.max(basePrice * 0.15, close);
+        if (high === undefined) high = Math.max(open, close) * (1 + rng() * 0.012);
+        if (low === undefined) low = Math.min(open, close) * (1 - rng() * 0.012);
+
+        const baseVol = 100000 / Math.max(basePrice, 0.000001);
+        const volume = baseVol * volMult;
+        const takerBuyVol = volume * Math.min(0.95, Math.max(0.05, takerRatio));
+        const delta = 2 * takerBuyVol - volume;
+        cvd += delta;
+
+        klines.push({
+          time: t, open, high, low, close, volume,
+          quoteVolume: volume * close, takerBuyVol, delta, cvd
+        });
+        price = close;
+      }
+      return klines;
+    }
+
+    /* =========================================================================
+     * 3. INDICATORS & WYCKOFF ENGINE — 技術指標與威科夫結構引擎
+     * ========================================================================= */
+    function safeDiv(num, den, fallback = 0) {
+      if (!Number.isFinite(num) || !Number.isFinite(den) || Math.abs(den) < 1e-12) return fallback;
+      return num / den;
+    }
+
+    function calcEMA(values, period) {
+      const out = new Array(values.length).fill(null);
+      if (values.length === 0) return out;
+      const k = 2 / (period + 1);
+      let ema = values[0];
+      out[0] = ema;
+      for (let i = 1; i < values.length; i++) {
+        const v = values[i];
+        if (!Number.isFinite(v)) {
+          out[i] = ema;
+          continue;
+        }
+        ema = v * k + ema * (1 - k);
+        out[i] = ema;
+      }
+      return out;
+    }
+
+    function calcSMA(values, period) {
+      const out = new Array(values.length).fill(null);
+      let sum = 0;
+      for (let i = 0; i < values.length; i++) {
+        sum += values[i];
+        if (i >= period) sum -= values[i - period];
+        if (i >= period - 1) out[i] = sum / period;
+      }
+      return out;
+    }
+
+    function calcBollingerBands(closes, period = 20, mult = 2) {
+      const upper = new Array(closes.length).fill(null);
+      const middle = new Array(closes.length).fill(null);
+      const lower = new Array(closes.length).fill(null);
+      const bbw = new Array(closes.length).fill(null);
+
+      for (let i = period - 1; i < closes.length; i++) {
+        let sum = 0;
+        for (let j = i - period + 1; j <= i; j++) sum += closes[j];
+        const mean = sum / period;
+        let sqSum = 0;
+        for (let j = i - period + 1; j <= i; j++) {
+          const diff = closes[j] - mean;
+          sqSum += diff * diff;
+        }
+        const std = Math.sqrt(sqSum / period);
+        const u = mean + mult * std;
+        const l = mean - mult * std;
+        middle[i] = mean;
+        upper[i] = u;
+        lower[i] = l;
+        bbw[i] = safeDiv(u - l, mean, 0);
+      }
+      return { upper, middle, lower, bbw };
+    }
+
+    function percentile(arr, p) {
+      if (!arr || arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const idx = Math.max(0, Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p)));
+      return sorted[idx];
+    }
+
+    function linearRegressionSlope(values) {
+      const n = values.length;
+      if (n < 2) return 0;
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += i;
+        sumY += values[i];
+        sumXY += i * values[i];
+        sumXX += i * i;
+      }
+      const denom = n * sumXX - sumX * sumX;
+      return safeDiv(n * sumXY - sumX * sumY, denom, 0);
+    }
+
+    function analyzeWyckoff(klines, volMA20) {
+      const n = klines.length;
+      if (n < 45) {
+        return {
+          score: 8,
+          tag: '資料不足',
+          type: 'none',
+          rangeLow: klines[0]?.low || 0,
+          rangeHigh: klines[0]?.high || 0,
+          rangePct: 0,
+          sweepLow: null,
+          markerTime: null,
+          markerText: null,
+          notes: ['K 線根數不足，僅提供基礎區間參考。']
+        };
+      }
+
+      // 取最近 40~80 根（不含最新 5 根）界定吸籌區間
+      const endIdx = n - 6;
+      const startIdx = Math.max(0, endIdx - 70);
+      const refSlice = klines.slice(startIdx, endIdx + 1);
+      const lows = refSlice.map(k => k.low);
+      const highs = refSlice.map(k => k.high);
+
+      const rangeLow = percentile(lows, 0.10);
+      const rangeHigh = percentile(highs, 0.90);
+      const rangeHeight = Math.max(rangeHigh - rangeLow, 1e-12);
+      const rangePct = safeDiv(rangeHeight, rangeLow, 0) * 100;
+
+      const latest = klines[n - 1];
+      const latestClose = latest.close;
+      const notes = [];
+
+      // 1) 偵測左側 Spring（彈簧效應）
+      const recent10Start = Math.max(0, n - 10);
+      let springIdx = -1;
+      let minSweepLow = Infinity;
+      for (let i = recent10Start; i < n; i++) {
+        const k = klines[i];
+        if (k.low < rangeLow * 0.996 && k.low < minSweepLow) {
+          minSweepLow = k.low;
+          springIdx = i;
+        }
+      }
+
+      const reclaimedAboveLow = latestClose >= rangeLow * 0.995 && latestClose <= rangeHigh * 1.03;
+      if (springIdx !== -1 && reclaimedAboveLow && rangePct <= 85) {
+        const spCandle = klines[springIdx];
+        const candleRange = Math.max(spCandle.high - spCandle.low, 1e-12);
+        const lowerWick = Math.min(spCandle.open, spCandle.close) - spCandle.low;
+        const wickRatio = safeDiv(lowerWick, candleRange, 0);
+        const refVol = volMA20[springIdx] || volMA20[n - 1] || 1;
+        const reclaimVolRatio = safeDiv(spCandle.volume, refVol, 1);
+
+        // 檢查回收後是否出現縮量回測不破新低
+        let hasLowVolRetest = false;
+        if (springIdx <= n - 2) {
+          const afterCandles = klines.slice(springIdx + 1);
+          const avgAfterVol = afterCandles.reduce((s, c) => s + c.volume, 0) / afterCandles.length;
+          const holdsSweep = afterCandles.every(c => c.low >= minSweepLow * 0.998);
+          if (holdsSweep && avgAfterVol < refVol * 0.95) {
+            hasLowVolRetest = true;
+          }
+        }
+
+        let score = 21;
+        if (wickRatio >= 0.35 || reclaimVolRatio >= 1.35) {
+          score += 5;
+          notes.push(`近 10 根 K 線向下插針跌破區間下緣 (${formatPrice(rangeLow)}) 後迅速收回，下影線比例 ${(wickRatio * 100).toFixed(0)}%、量能為均量 ${reclaimVolRatio.toFixed(1)} 倍，符合主力洗盤掃止損特徵。`);
+        } else {
+          score += 2;
+          notes.push(`價格曾短暫跌破區間下緣並收回，呈現初級 Spring 結構。`);
+        }
+
+        if (hasLowVolRetest) {
+          score += 4;
+          notes.push(`回收後伴隨縮量回測且不破針尖低點 (${formatPrice(minSweepLow)})，顯示市場浮籌已大幅枯竭。`);
+        }
+
+        return {
+          score: Math.min(30, score),
+          tag: 'Spring 伏擊',
+          type: 'spring',
+          rangeLow,
+          rangeHigh,
+          rangePct,
+          sweepLow: minSweepLow,
+          markerTime: spCandle.time,
+          markerText: 'Spring',
+          notes
+        };
+      }
+
+      // 2) 偵測右側 LPS（最後支撐點：SOS 放量突破 + 縮量回踩）
+      const recent15Start = Math.max(0, n - 15);
+      let sosIdx = -1;
+      let sosVol = 0;
+      for (let i = recent15Start; i < n - 1; i++) {
+        const k = klines[i];
+        const avgV = volMA20[i] || volMA20[n - 1] || 1;
+        if (k.close > rangeHigh * 1.005 && k.volume >= avgV * 1.45) {
+          sosIdx = i;
+          sosVol = k.volume;
+        }
+      }
+
+      const distToRangeHigh = safeDiv(latestClose - rangeHigh, rangeHigh, 0);
+      if (sosIdx !== -1 && distToRangeHigh >= -0.03 && distToRangeHigh <= 0.045) {
+        const pullbackCandles = klines.slice(sosIdx + 1);
+        const avgPullVol = pullbackCandles.length > 0
+          ? pullbackCandles.reduce((s, c) => s + c.volume, 0) / pullbackCandles.length
+          : latest.volume;
+        const curVolMA = volMA20[n - 1] || 1;
+        const isContractingVol = avgPullVol < sosVol * 0.72 || avgPullVol < curVolMA * 0.95;
+
+        let score = 22;
+        notes.push(`近期出現帶量突破區間上緣 (${formatPrice(rangeHigh)}) 的強勢訊號 (SOS)，目前回踩原壓力位附近 (${(distToRangeHigh * 100).toFixed(1)}%)。`);
+
+        if (isContractingVol) {
+          score += 6;
+          notes.push(`回踩過程成交量明顯萎縮（為突破量能之 ${(safeDiv(avgPullVol, sosVol, 0) * 100).toFixed(0)}%），確認壓力轉支撐的右側 LPS 結構。`);
+        } else {
+          score += 2;
+          notes.push(`已回踩原區間上緣，但回調量能尚未極度萎縮，建議留意是否守穩支撐。`);
+        }
+        if (latestClose >= rangeHigh) score += 2;
+
+        return {
+          score: Math.min(30, score),
+          tag: 'LPS 回踩',
+          type: 'lps',
+          rangeLow,
+          rangeHigh,
+          rangePct,
+          sweepLow: null,
+          markerTime: klines[sosIdx].time,
+          markerText: 'SOS→LPS',
+          notes
+        };
+      }
+
+      // 3) 區間吸籌觀察 vs 破底 / 高位派發
+      if (latestClose >= rangeLow * 0.985 && latestClose <= rangeHigh * 1.02 && rangePct <= 70) {
+        // 計算區間下緣支撐測試次數
+        let touches = 0;
+        let inZone = false;
+        const supportBand = rangeLow + rangeHeight * 0.25;
+        for (let i = startIdx; i < n; i++) {
+          if (klines[i].low <= supportBand) {
+            if (!inZone) {
+              touches++;
+              inZone = true;
+            }
+          } else {
+            inZone = false;
+          }
+        }
+        const score = Math.min(18, Math.max(10, 10 + Math.min(4, touches) * 2));
+        notes.push(`價格位於箱體區間 (${formatPrice(rangeLow)} ~ ${formatPrice(rangeHigh)}，振幅 ${rangePct.toFixed(1)}%) 內橫盤吸籌，下方支撐已獲約 ${touches} 次測試，等待 Spring 或放量突破確認。`);
+        return {
+          score,
+          tag: '吸籌觀察',
+          type: 'accumulation',
+          rangeLow,
+          rangeHigh,
+          rangePct,
+          sweepLow: null,
+          markerTime: null,
+          markerText: null,
+          notes
+        };
+      }
+
+      if (latestClose < rangeLow * 0.985) {
+        notes.push(`警告：價格已跌破區間下緣 (${formatPrice(rangeLow)}) 且尚未收回，屬於弱勢破底結構，不宜盲目接刀。`);
+        return {
+          score: 4,
+          tag: '破底弱勢',
+          type: 'breakdown',
+          rangeLow,
+          rangeHigh,
+          rangePct,
+          sweepLow: null,
+          markerTime: null,
+          markerText: null,
+          notes
+        };
+      }
+
+      // 高位延伸 / 疑似派發
+      const score = distToRangeHigh > 0.15 ? 5 : 9;
+      notes.push(`價格已脫離原吸籌區間上緣 +${(distToRangeHigh * 100).toFixed(1)}%，處於拉升後段或高位派發風險區，追高盈虧比較差。`);
+      return {
+        score,
+        tag: distToRangeHigh > 0.15 ? '高位派發風險' : '已脫離區間',
+        type: 'extended',
+        rangeLow,
+        rangeHigh,
+        rangePct,
+        sweepLow: null,
+        markerTime: null,
+        markerText: null,
+        notes
+      };
+    }
+
+    /* =========================================================================
+     * 4. SCORING ENGINE — 四維共振評分引擎 (0~100 分) 與風控位階計算
+     * ========================================================================= */
+    function scoreAsset({ ticker, klines, btcKlines, fundingRate, oiHist, hasFutures }) {
+      const n = klines.length;
+      const closes = klines.map(k => k.close);
+      const volumes = klines.map(k => k.volume);
+      const cvds = klines.map(k => k.cvd);
+
+      const ema20 = calcEMA(closes, 20);
+      const ema50 = calcEMA(closes, 50);
+      const ema120 = calcEMA(closes, 120);
+      const volMA20 = calcSMA(volumes, 20);
+      const bb = calcBollingerBands(closes, 20, 2);
+
+      const latest = klines[n - 1];
+      const latestClose = latest.close;
+
+      const positives = [];
+      const warnings = [];
+
+      /* --- 維度一：威科夫量價結構 (滿分 30) --- */
+      const wyckoff = analyzeWyckoff(klines, volMA20);
+      wyckoff.notes.forEach(txt => {
+        if (wyckoff.score >= 16) positives.push(`[結構] ${txt}`);
+        else warnings.push(`[結構] ${txt}`);
+      });
+
+      /* --- 維度二：波動率壓縮濾網 (滿分 20) --- */
+      const validBbw = bb.bbw.filter(v => Number.isFinite(v));
+      const lookbackBbw = validBbw.slice(-100);
+      const currentBbw = lookbackBbw[lookbackBbw.length - 1] || 0;
+      let lowerCount = 0;
+      for (const v of lookbackBbw) {
+        if (v <= currentBbw) lowerCount++;
+      }
+      const bbwPercentile = lookbackBbw.length > 0 ? (lowerCount / lookbackBbw.length) * 100 : 50;
+
+      let bbwScore = 0;
+      if (bbwPercentile <= 15) bbwScore = 12;
+      else if (bbwPercentile <= 30) bbwScore = 8;
+      else if (bbwPercentile <= 50) bbwScore = 4;
+      else bbwScore = Math.max(0, Math.round((1 - (bbwPercentile - 50) / 50) * 3));
+
+      const e20 = ema20[n - 1] || latestClose;
+      const e50 = ema50[n - 1] || latestClose;
+      const e120 = ema120[n - 1] || latestClose;
+      const emaSpreadPct = safeDiv(Math.max(e20, e50, e120) - Math.min(e20, e50, e120), latestClose, 0.1) * 100;
+
+      let emaScore = 0;
+      if (emaSpreadPct <= 3) emaScore = 8;
+      else if (emaSpreadPct <= 6) emaScore = 5;
+      else if (emaSpreadPct <= 10) emaScore = 2.5;
+      else emaScore = Math.max(0, Number((2 * Math.max(0, 1 - (emaSpreadPct - 10) / 15)).toFixed(1)));
+
+      const volScore = Math.min(20, Math.round(bbwScore + emaScore));
+      if (bbwPercentile <= 20) {
+        positives.push(`[波動] 布林帶寬度處於近 100 期第 ${bbwPercentile.toFixed(0)}% 極低分位，均線最大價差 ${emaSpreadPct.toFixed(1)}%，變盤爆發前兆明顯。`);
+      } else if (bbwPercentile <= 45) {
+        positives.push(`[波動] 波動率收斂至第 ${bbwPercentile.toFixed(0)}% 分位，均線價差 ${emaSpreadPct.toFixed(1)}%，動能正逐步蓄力。`);
+      } else {
+        warnings.push(`[波動] 當前布林帶寬度偏大（第 ${bbwPercentile.toFixed(0)}% 分位），均線發散度 ${emaSpreadPct.toFixed(1)}%，短線波動較劇烈。`);
+      }
+
+      /* --- 維度三：加密獨有籌碼驗證 (滿分 30) --- */
+      const recent20Closes = closes.slice(-20);
+      const recent20Cvds = cvds.slice(-20);
+      const recent20Vols = volumes.slice(-20);
+      const avgVol20 = recent20Vols.reduce((s, v) => s + v, 0) / Math.max(1, recent20Vols.length);
+
+      const priceSlopeRaw = linearRegressionSlope(recent20Closes);
+      const priceSlopeTotalPct = safeDiv(priceSlopeRaw * 20, recent20Closes[0] || 1, 0) * 100;
+      const cvdSlopeRaw = linearRegressionSlope(recent20Cvds);
+      const cvdSlopeNorm = safeDiv(cvdSlopeRaw, avgVol20 || 1, 0); // 每根 K 線平均淨買盤佔均量比例
+
+      let spotCvdScore = 7;
+      let cvdTag = '現貨中性';
+      let isCvdDivergence = false;
+
+      if (priceSlopeTotalPct <= 1.8 && cvdSlopeNorm >= 0.04) {
+        isCvdDivergence = true;
+        spotCvdScore = cvdSlopeNorm >= 0.12 ? 15 : 13;
+        cvdTag = '現貨底背離';
+        positives.push(`[現貨籌碼] 近 20 根 K 線價格橫盤或微跌 (${priceSlopeTotalPct.toFixed(1)}%)，但 Spot CVD 明顯墊高，呈現典型主力現貨吃貨底背離。`);
+      } else if (priceSlopeTotalPct > 1.8 && cvdSlopeNorm >= 0.03) {
+        spotCvdScore = cvdSlopeNorm >= 0.10 ? 12 : 10;
+        cvdTag = '現貨同步推升';
+        positives.push(`[現貨籌碼] 價格上漲伴隨現貨 CVD 同步走高，買盤結構具真實現貨支撐。`);
+      } else if (priceSlopeTotalPct > 1.5 && cvdSlopeNorm <= -0.03) {
+        spotCvdScore = 2;
+        cvdTag = '警戒：無現貨支撐';
+        warnings.push(`[現貨籌碼] 警戒！價格上漲但現貨 CVD 持續下滑，疑似合約拉盤誘多、現貨趁機出貨。`);
+      } else if (cvdSlopeNorm < -0.05) {
+        spotCvdScore = 4;
+        cvdTag = '現貨偏弱流出';
+        warnings.push(`[現貨籌碼] 近期主動賣盤略佔上風，現貨買氣尚未全面回流。`);
+      } else {
+        spotCvdScore = 7;
+        cvdTag = '現貨中性平衡';
+      }
+
+      // 衍生品：資金費率 + OI
+      let derivScore = 0;
+      let oiChangePct = null;
+      let fundingTag = '無合約數據';
+      let isNegFunding = false;
+      let isOverheated = false;
+
+      if (hasFutures && fundingRate !== null && Number.isFinite(fundingRate)) {
+        // 資金費率給分 (滿分 8)
+        let frScore = 0;
+        const frPct = fundingRate * 100; // e.g., 0.01 代表 0.01%
+        if (frPct <= 0) {
+          frScore = 8;
+          isNegFunding = true;
+          fundingTag = '負費率軋空';
+          positives.push(`[衍生品] 資金費率為負 (${frPct.toFixed(4)}%)，代表市場空單擁擠，一旦拉升將提供強勁軋空燃料。`);
+        } else if (frPct <= 0.012) {
+          frScore = 6;
+          fundingTag = '費率中性健康';
+          positives.push(`[衍生品] 資金費率維持健康中性 (${frPct.toFixed(4)}%)，多頭槓桿無過熱疑慮。`);
+        } else if (frPct <= 0.035) {
+          frScore = 3;
+          fundingTag = '費率略偏高';
+        } else if (frPct <= 0.05) {
+          frScore = 1;
+          fundingTag = '費率偏熱';
+          warnings.push(`[衍生品] 資金費率升高至 ${frPct.toFixed(4)}%，多單追價情緒偏熱。`);
+        } else {
+          frScore = -3;
+          isOverheated = true;
+          fundingTag = '費率過熱警訊';
+          warnings.push(`[衍生品] 警告！資金費率高達 ${frPct.toFixed(4)}% (>0.05%)，市場槓桿極度擁擠，慎防多殺多插針。`);
+        }
+
+        // OI 變化率給分 (滿分 7)
+        let oiScore = 3;
+        if (oiHist && oiHist.length >= 6) {
+          const oiNow = oiHist[oiHist.length - 1].oi;
+          const oiBaseIdx = Math.max(0, oiHist.length - 13);
+          const oiPrev = oiHist[oiBaseIdx].oi;
+          oiChangePct = safeDiv(oiNow - oiPrev, oiPrev, 0) * 100;
+
+          if (oiChangePct >= 3 && oiChangePct <= 25 && latestClose >= wyckoff.rangeLow * 0.99) {
+            oiScore = 7;
+            positives.push(`[衍生品] 未平倉合約 (OI) 溫和增倉 +${oiChangePct.toFixed(1)}% 且價格站穩支撐，顯示新資金有序建倉。`);
+          } else if (oiChangePct > 0 && oiChangePct < 3) {
+            oiScore = 4;
+          } else if (oiChangePct > 25 && frPct > 0.03) {
+            oiScore = -2;
+            isOverheated = true;
+            warnings.push(`[衍生品] OI 暴增 +${oiChangePct.toFixed(1)}% 且費率偏高，屬於高風險槓桿擁擠結構。`);
+          } else if (oiChangePct > 25) {
+            oiScore = 5;
+            positives.push(`[衍生品] OI 顯著放大 +${oiChangePct.toFixed(1)}% 但費率仍受控，主力資金積極介入。`);
+          } else if (oiChangePct < -10) {
+            oiScore = 2;
+            warnings.push(`[衍生品] 近期 OI 減倉 ${oiChangePct.toFixed(1)}%，合約資金熱度暫時退潮。`);
+          } else {
+            oiScore = 3;
+          }
+        }
+        derivScore = Math.max(0, Math.min(15, Math.round(frScore + oiScore)));
+      }
+
+      let chipScore;
+      if (hasFutures && fundingRate !== null) {
+        chipScore = Math.max(0, Math.min(30, Math.round(spotCvdScore + derivScore)));
+      } else {
+        // 無 USDT 永續合約：將現貨 CVD 分數由 15 分歸一化至 30 分，不中斷不報錯
+        chipScore = Math.max(0, Math.min(30, Math.round((spotCvdScore / 15) * 30)));
+        warnings.push(`[衍生品] 該標的無對應 Binance USDT 永續合約，籌碼維度已由現貨 CVD 權重自動歸一化計算。`);
+      }
+
+      /* --- 維度四：對 BTC 相對強弱 (滿分 20) --- */
+      let rsScore = 10;
+      let rsTag = '同步大盤';
+      let rsMom14Pct = 0;
+
+      if (ticker.symbol === 'BTCUSDT') {
+        rsScore = 10;
+        rsTag = '大盤基準';
+      } else if (btcKlines && btcKlines.length > 20) {
+        const btcMap = new Map(btcKlines.map(k => [k.time, k.close]));
+        const rsSeries = [];
+        for (const k of klines) {
+          const bc = btcMap.get(k.time);
+          if (bc && bc > 0) rsSeries.push(k.close / bc);
+        }
+
+        if (rsSeries.length >= 30) {
+          const rsEma20 = calcEMA(rsSeries, 20);
+          const rsEma50 = calcEMA(rsSeries, 50);
+          const rLen = rsSeries.length;
+          const rsNow = rsSeries[rLen - 1];
+          const above20 = rsNow >= rsEma20[rLen - 1];
+          const above50 = rsNow >= rsEma50[rLen - 1];
+
+          let maPts = 0;
+          if (above20 && above50) maPts = 8;
+          else if (above20) maPts = 5;
+          else if (above50) maPts = 3;
+
+          const rs14Ago = rsSeries[Math.max(0, rLen - 15)];
+          rsMom14Pct = safeDiv(rsNow - rs14Ago, rs14Ago, 0) * 100;
+          let momPts = 0;
+          if (rsMom14Pct >= 5) momPts = 6;
+          else if (rsMom14Pct >= 2) momPts = 4.5;
+          else if (rsMom14Pct > 0) momPts = 3;
+          else if (rsMom14Pct > -2) momPts = 1;
+
+          // Higher Lows 檢驗（近 30 根分 3 段取區段低點）
+          const seg = rsSeries.slice(-30);
+          const low1 = Math.min(...seg.slice(0, 10));
+          const low2 = Math.min(...seg.slice(10, 20));
+          const low3 = Math.min(...seg.slice(20, 30));
+          let hlPts = 0;
+          if (low3 > low2 && low2 > low1) hlPts = 6;
+          else if (low3 > low2) hlPts = 3.5;
+
+          rsScore = Math.min(20, Math.round(maPts + momPts + hlPts));
+          if (rsScore >= 15) {
+            rsTag = '強於 BTC 領漲';
+            positives.push(`[相對強弱] ALT/BTC 匯率站穩均線並築出抬高底，近 14 期超額報酬 +${rsMom14Pct.toFixed(1)}%，具獨立強勢資金進駐。`);
+          } else if (rsScore >= 10) {
+            rsTag = '穩健抗跌';
+          } else {
+            rsTag = '弱於 BTC';
+            warnings.push(`[相對強弱] 對 BTC 匯率偏弱（近 14 期超額報酬 ${rsMom14Pct.toFixed(1)}%），資金輪動尚未聚焦此標的。`);
+          }
+        }
+      }
+
+      /* --- 綜合評分與交易風險規劃 --- */
+      const totalScore = Math.max(0, Math.min(100, Math.round(wyckoff.score + volScore + chipScore + rsScore)));
+      let tier = 'watch';
+      let tierLabel = '觀望';
+      if (totalScore >= 75) {
+        tier = 'strong';
+        tierLabel = '強共振起漲';
+      } else if (totalScore >= 60) {
+        tier = 'potential';
+        tierLabel = '高潛力觀察';
+      }
+
+      // 風險位階與 R:R 計算
+      const rangeH = wyckoff.rangeHigh;
+      const rangeL = wyckoff.rangeLow;
+      const boxHeight = Math.max(rangeH - rangeL, latestClose * 0.05);
+
+      let strategyText = '區間觀察 / 等待明確觸發';
+      let stopLoss = rangeL * 0.985;
+      let target1 = rangeH;
+
+      if (wyckoff.type === 'spring') {
+        strategyText = '左側 Spring 伏擊（可分批於回測不破新低佈局）';
+        stopLoss = (wyckoff.sweepLow || rangeL) * 0.985;
+        target1 = rangeH > latestClose * 1.045 ? rangeH : rangeH + boxHeight * 0.5;
+      } else if (wyckoff.type === 'lps') {
+        strategyText = '右側 LPS 回踩確認（站穩原壓力位切入）';
+        const recentLow5 = Math.min(...klines.slice(-5).map(k => k.low));
+        stopLoss = Math.min(rangeH * 0.968, recentLow5 * 0.985);
+        target1 = rangeH + boxHeight * 0.618;
+      } else if (wyckoff.type === 'accumulation') {
+        strategyText = '吸籌觀察清單（等待 Spring 掃底或帶量突破）';
+        stopLoss = rangeL * 0.985;
+        target1 = rangeH > latestClose * 1.04 ? rangeH : rangeH + boxHeight * 0.4;
+      } else {
+        strategyText = '結構非最佳起漲位置（建議觀望）';
+        stopLoss = latestClose * 0.94;
+        target1 = latestClose * 1.08;
+      }
+
+      // 邊界防呆確保 StopLoss < Entry < Target1
+      if (!Number.isFinite(stopLoss) || stopLoss >= latestClose * 0.992) {
+        stopLoss = latestClose * 0.95;
+      }
+      if (!Number.isFinite(target1) || target1 <= latestClose * 1.02) {
+        target1 = latestClose * 1.10;
+      }
+
+      const riskAbs = latestClose - stopLoss;
+      const rewardAbs = target1 - latestClose;
+      const riskPct = safeDiv(riskAbs, latestClose, 0) * 100;
+      const rewardPct = safeDiv(rewardAbs, latestClose, 0) * 100;
+      const rrRatio = safeDiv(rewardAbs, riskAbs, 0);
+
+      return {
+        symbol: ticker.symbol,
+        price: ticker.price || latestClose,
+        change24h: Number.isFinite(ticker.change24h) ? ticker.change24h : 0,
+        quoteVolume24h: Number.isFinite(ticker.quoteVolume24h) ? ticker.quoteVolume24h : 0,
+        totalScore,
+        tier,
+        tierLabel,
+        wyckoffScore: wyckoff.score,
+        wyckoffTag: wyckoff.tag,
+        wyckoffType: wyckoff.type,
+        rangeLow: rangeL,
+        rangeHigh: rangeH,
+        rangePct: wyckoff.rangePct,
+        markerTime: wyckoff.markerTime,
+        markerText: wyckoff.markerText,
+        volScore,
+        bbwPercentile,
+        emaSpreadPct,
+        chipScore,
+        spotCvdScore,
+        derivScore,
+        cvdTag,
+        isCvdDivergence,
+        hasFutures: Boolean(hasFutures && fundingRate !== null),
+        fundingRate: hasFutures && fundingRate !== null ? fundingRate : null,
+        fundingTag,
+        isNegFunding,
+        isOverheated,
+        oiChangePct,
+        rsScore,
+        rsTag,
+        rsMom14Pct,
+        plan: {
+          strategyText,
+          stopLoss,
+          target1,
+          riskPct,
+          rewardPct,
+          rrRatio
+        },
+        diagnostics: {
+          positives,
+          warnings
+        },
+        series: {
+          klines,
+          ema20,
+          ema50,
+          ema120,
+          bbUpper: bb.upper,
+          bbLower: bb.lower
+        }
+      };
+    }
+
+    /* =========================================================================
+     * 5. CHART & UI RENDERER — 格式化、表格、KPI、圖表與互動控制器
+     * ========================================================================= */
+    function formatPrice(p) {
+      if (!Number.isFinite(p) || p <= 0) return '--';
+      if (p >= 1000) return p.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+      if (p >= 1) return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      if (p >= 0.01) return p.toFixed(5);
+      return p.toFixed(7);
+    }
+
+    function formatCompactUsd(v) {
+      if (!Number.isFinite(v) || v <= 0) return '--';
+      if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+      if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+      if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+      return `$${v.toFixed(0)}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function updateProgress(show, pct = 0, text = '') {
+      const container = document.getElementById('progressContainer');
+      const bar = document.getElementById('progressBar');
+      const pctEl = document.getElementById('progressPct');
+      const textEl = document.getElementById('progressText');
+      container.classList.toggle('hidden', !show);
+      if (show) {
+        const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+        bar.style.width = `${clamped}%`;
+        pctEl.textContent = `${clamped}%`;
+        textEl.textContent = text;
+      }
+    }
+
+    function showErrorBanner(show, detail = '') {
+      const banner = document.getElementById('errorBanner');
+      banner.classList.toggle('hidden', !show);
+      if (detail) {
+        document.getElementById('errorBannerDetail').textContent = detail;
+      }
+    }
+
+    function updateModeBadge(isDemo) {
+      const badge = document.getElementById('modeBadge');
+      if (isDemo) {
+        badge.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/40';
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Demo 模擬模式`;
+      } else {
+        badge.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>Binance 即時數據`;
+      }
+    }
+
+    function updateMarketContext() {
+      const klines = APP_STATE.btcKlines;
+      const priceEl = document.getElementById('btcPriceDisplay');
+      const chgEl = document.getElementById('btcChangeDisplay');
+      const trendEl = document.getElementById('btcTrendDisplay');
+      const fundEl = document.getElementById('avgFundingDisplay');
+
+      if (klines && klines.length >= 50) {
+        const closes = klines.map(k => k.close);
+        const last = closes[closes.length - 1];
+        const prevIdx = Math.max(0, closes.length - (APP_STATE.timeframe === '1d' ? 2 : 7));
+        const chg = safeDiv(last - closes[prevIdx], closes[prevIdx], 0) * 100;
+
+        priceEl.textContent = `$${formatPrice(last)}`;
+        chgEl.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+        chgEl.className = `font-mono text-[11px] px-1.5 py-0.5 rounded ${chg >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`;
+
+        const e20 = calcEMA(closes, 20)[closes.length - 1];
+        const e50 = calcEMA(closes, 50)[closes.length - 1];
+        if (last > e20 && e20 > e50) {
+          trendEl.textContent = '多頭排列偏強';
+          trendEl.className = 'font-semibold text-emerald-400';
+        } else if (last < e20 && e20 < e50) {
+          trendEl.textContent = '空頭承壓謹慎';
+          trendEl.className = 'font-semibold text-red-400';
+        } else {
+          trendEl.textContent = '箱體震盪整理';
+          trendEl.className = 'font-semibold text-amber-300';
+        }
+      }
+
+      if (APP_STATE.avgFundingRate !== null && Number.isFinite(APP_STATE.avgFundingRate)) {
+        const pct = APP_STATE.avgFundingRate * 100;
+        fundEl.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(4)}%`;
+        fundEl.className = `font-mono font-medium ${pct <= 0 ? 'text-cyan-300' : pct > 0.03 ? 'text-red-400' : 'text-emerald-300'}`;
+      } else {
+        fundEl.textContent = '--';
+      }
+    }
+
+    function updateKPIs() {
+      const list = APP_STATE.results;
+      const strongCount = list.filter(r => r.totalScore >= 75).length;
+      const springCount = list.filter(r => r.wyckoffType === 'spring').length;
+      const lpsCount = list.filter(r => r.wyckoffType === 'lps').length;
+
+      document.getElementById('kpiScanned').textContent = list.length;
+      document.getElementById('kpiStrong').textContent = strongCount;
+      document.getElementById('kpiSpring').textContent = springCount;
+      document.getElementById('kpiLps').textContent = lpsCount;
+
+      const nowStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      document.getElementById('kpiScanTime').textContent = list.length > 0 ? `更新於 ${nowStr} (${APP_STATE.timeframe.toUpperCase()})` : '尚未執行掃描';
+      document.getElementById('exportCsvBtn').disabled = list.length === 0;
+    }
+
+    function getFilteredSortedResults() {
+      const q = APP_STATE.searchQuery.trim().toUpperCase();
+      let list = APP_STATE.results.filter(r => {
+        if (q && !r.symbol.includes(q)) return false;
+        switch (APP_STATE.activeFilter) {
+          case 'strong': return r.totalScore >= 75;
+          case 'spring': return r.wyckoffType === 'spring';
+          case 'lps': return r.wyckoffType === 'lps';
+          case 'negFunding': return r.isNegFunding;
+          case 'squeeze': return r.bbwPercentile <= 20;
+          case 'cvdDiv': return r.isCvdDivergence;
+          default: return true;
+        }
+      });
+
+      const key = APP_STATE.sortBy;
+      const dir = APP_STATE.sortDir === 'asc' ? 1 : -1;
+      list.sort((a, b) => {
+        if (key === 'symbol') return a.symbol.localeCompare(b.symbol) * dir;
+        const va = a[key] === null || a[key] === undefined ? -999999 : Number(a[key]);
+        const vb = b[key] === null || b[key] === undefined ? -999999 : Number(b[key]);
+        return (va - vb) * dir;
+      });
+      return list;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('scannerTableBody');
+      const list = getFilteredSortedResults();
+      document.getElementById('visibleCountBadge').textContent = `顯示 ${list.length} / ${APP_STATE.results.length} 筆`;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="px-6 py-12 text-center text-slate-400">
+              ${APP_STATE.results.length === 0
+                ? '目前尚無掃描結果，請點擊上方「開始掃描」或「模擬數據 (Demo)」。'
+                : '沒有符合當前濾鏡條件的幣種，請嘗試切換濾鏡或清空搜尋關鍵字。'}
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(r => {
+        const baseName = r.symbol.replace('USDT', '');
+        const chgClass = r.change24h >= 0 ? 'text-emerald-400' : 'text-red-400';
+
+        // Score color
+        const scoreColor = r.totalScore >= 75 ? 'bg-emerald-500' : r.totalScore >= 60 ? 'bg-amber-400' : 'bg-slate-500';
+        const scoreTextColor = r.totalScore >= 75 ? 'text-emerald-300' : r.totalScore >= 60 ? 'text-amber-300' : 'text-slate-300';
+
+        // Wyckoff badge
+        let wyckoffCls = 'bg-slate-800 text-slate-300 border-slate-700';
+        if (r.wyckoffType === 'spring') wyckoffCls = 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+        else if (r.wyckoffType === 'lps') wyckoffCls = 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40';
+        else if (r.wyckoffType === 'accumulation') wyckoffCls = 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40';
+        else if (r.wyckoffType === 'breakdown') wyckoffCls = 'bg-red-500/15 text-red-300 border-red-500/40';
+
+        // BBW color
+        const bbwCls = r.bbwPercentile <= 15 ? 'text-emerald-300 font-semibold' : r.bbwPercentile <= 30 ? 'text-cyan-300' : 'text-slate-400';
+
+        // CVD badge
+        let cvdCls = 'text-slate-300';
+        if (r.isCvdDivergence) cvdCls = 'text-emerald-300 font-semibold';
+        else if (r.cvdTag.includes('警戒')) cvdCls = 'text-red-400 font-semibold';
+        else if (r.cvdTag.includes('同步')) cvdCls = 'text-cyan-300';
+
+        // OI & Funding
+        let derivHtml = `<span class="text-slate-500">無合約數據</span>`;
+        if (r.hasFutures) {
+          const frPct = (r.fundingRate * 100).toFixed(4) + '%';
+          const frCls = r.isNegFunding ? 'text-cyan-300 font-semibold' : r.isOverheated ? 'text-red-400 font-semibold' : 'text-slate-300';
+          const oiTxt = r.oiChangePct !== null ? `${r.oiChangePct >= 0 ? '+' : ''}${r.oiChangePct.toFixed(1)}%` : '--';
+          const oiCls = r.oiChangePct !== null && r.oiChangePct >= 3 && r.oiChangePct <= 25 ? 'text-emerald-300' : 'text-slate-400';
+          derivHtml = `
+            <div class="font-mono text-[11px] leading-tight">
+              <span class="${oiCls}">OI ${oiTxt}</span>
+              <div class="${frCls}">費率 ${frPct}</div>
+            </div>`;
+        }
+
+        // RS badge
+        const rsCls = r.rsScore >= 15 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          : r.rsScore >= 10 ? 'bg-slate-800 text-slate-300 border-slate-700'
+          : 'bg-red-500/10 text-red-300 border-red-500/25';
+
+        return `
+          <tr class="hover:bg-slate-800/45 transition cursor-pointer group" onclick="openDetailDrawer('${escapeHtml(r.symbol)}')">
+            <td class="px-3.5 py-3 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-slate-100 group-hover:text-emerald-300 transition">${escapeHtml(baseName)}</span>
+                <span class="text-[10px] text-slate-500 font-mono">/USDT</span>
+              </div>
+              <div class="text-[10px] text-slate-500 font-mono">額 ${formatCompactUsd(r.quoteVolume24h)}</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap text-right font-mono">
+              <div class="text-slate-100 font-medium">$${formatPrice(r.price)}</div>
+              <div class="text-[11px] ${chgClass}">${r.change24h >= 0 ? '+' : ''}${r.change24h.toFixed(2)}%</div>
+            </td>
+            <td class="px-3.5 py-3 whitespace-nowrap">
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <span class="font-mono font-bold ${scoreTextColor}">${r.totalScore} 分</span>
+                <span class="text-[10px] text-slate-400">${r.tierLabel}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full ${scoreColor} rounded-full" style="width: ${r.totalScore}%"></div>
+              </div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <span class="inline-flex items-center px-2 py-0.5 rounded border text-[11px] font-medium ${wyckoffCls}">${escapeHtml(r.wyckoffTag)}</span>
+              <div class="text-[10px] font-mono text-slate-500 mt-0.5">${r.wyckoffScore} / 30 分</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap font-mono">
+              <div class="${bbwCls}">P${r.bbwPercentile.toFixed(0)}</div>
+              <div class="text-[10px] text-slate-500">均線差 ${r.emaSpreadPct.toFixed(1)}%</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <div class="text-[11px] ${cvdCls}">${escapeHtml(r.cvdTag)}</div>
+              <div class="text-[10px] font-mono text-slate-500">現貨 ${r.spotCvdScore}/15</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">${derivHtml}</td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <span class="inline-flex items-center px-2 py-0.5 rounded border text-[11px] ${rsCls}">${escapeHtml(r.rsTag)}</span>
+              <div class="text-[10px] font-mono text-slate-500 mt-0.5">${r.rsScore}/20 (${r.rsMom14Pct >= 0 ? '+' : ''}${r.rsMom14Pct.toFixed(1)}%)</div>
+            </td>
+            <td class="px-3.5 py-3 whitespace-nowrap text-center">
+              <button class="px-2.5 py-1 rounded-md bg-slate-800 group-hover:bg-emerald-600/80 text-slate-200 group-hover:text-white border border-slate-700 group-hover:border-emerald-500 text-[11px] font-medium transition">
+                圖表與診斷
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    /* ---------------- 詳情側邊抽屜 & Lightweight Charts 雙圖表 ---------------- */
+    function destroyCharts() {
+      if (APP_STATE.charts.resizeObserver) {
+        APP_STATE.charts.resizeObserver.disconnect();
+        APP_STATE.charts.resizeObserver = null;
+      }
+      if (APP_STATE.charts.main) {
+        APP_STATE.charts.main.remove();
+        APP_STATE.charts.main = null;
+      }
+      if (APP_STATE.charts.cvd) {
+        APP_STATE.charts.cvd.remove();
+        APP_STATE.charts.cvd = null;
+      }
+      APP_STATE.charts.emaSeries = [];
+      APP_STATE.charts.bbSeries = [];
+    }
+
+    function openDetailDrawer(symbol) {
+      const item = APP_STATE.results.find(r => r.symbol === symbol);
+      if (!item) return;
+      APP_STATE.selectedSymbol = symbol;
+
+      document.getElementById('drawerBackdrop').classList.remove('hidden');
+      document.getElementById('detailDrawer').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // Header Info
+      document.getElementById('drawerSymbol').textContent = item.symbol;
+      document.getElementById('drawerTfBadge').textContent = APP_STATE.timeframe.toUpperCase();
+      document.getElementById('drawerPrice').textContent = `$${formatPrice(item.price)}`;
+      const chgEl = document.getElementById('drawerChange');
+      chgEl.textContent = `${item.change24h >= 0 ? '+' : ''}${item.change24h.toFixed(2)}%`;
+      chgEl.className = `font-mono ${item.change24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+      document.getElementById('drawerVol').textContent = `24H 成交額: ${formatCompactUsd(item.quoteVolume24h)}`;
+
+      const tierBadge = document.getElementById('drawerTierBadge');
+      tierBadge.textContent = item.tierLabel;
+      tierBadge.className = item.totalScore >= 75
+        ? 'px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+        : item.totalScore >= 60
+        ? 'px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40'
+        : 'px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-800 text-slate-300 border border-slate-700';
+
+      const scoreEl = document.getElementById('drawerTotalScore');
+      scoreEl.textContent = `${item.totalScore} / 100`;
+      scoreEl.className = `text-xl font-mono font-bold ${item.totalScore >= 75 ? 'text-emerald-400' : item.totalScore >= 60 ? 'text-amber-400' : 'text-slate-300'}`;
+
+      document.getElementById('drawerCvdSummary').textContent = `狀態：${item.cvdTag} (現貨評分 ${item.spotCvdScore}/15)`;
+
+      // 四維得分進度條
+      const dims = [
+        { name: '維度一：威科夫量價結構', score: item.wyckoffScore, max: 30, tag: item.wyckoffTag, color: 'bg-amber-400' },
+        { name: '維度二：波動率壓縮濾網', score: item.volScore, max: 20, tag: `BBW P${item.bbwPercentile.toFixed(0)} / 均線差 ${item.emaSpreadPct.toFixed(1)}%`, color: 'bg-cyan-400' },
+        { name: '維度三：加密籌碼與衍生品', score: item.chipScore, max: 30, tag: `${item.cvdTag} · ${item.fundingTag}`, color: 'bg-emerald-400' },
+        { name: '維度四：對 BTC 相對強弱', score: item.rsScore, max: 20, tag: item.rsTag, color: 'bg-purple-400' }
+      ];
+      document.getElementById('dimensionBars').innerHTML = dims.map(d => {
+        const pct = Math.min(100, Math.round((d.score / d.max) * 100));
+        return `
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-slate-200 font-medium">${d.name}</span>
+              <span class="font-mono text-slate-300"><strong class="text-slate-100">${d.score}</strong> / ${d.max} <span class="text-slate-500 text-[11px] ml-1">(${escapeHtml(d.tag)})</span></span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full ${d.color} rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+
+      // 白話診斷報告
+      const diagHtml = [
+        ...item.diagnostics.positives.map(msg => `
+          <li class="flex items-start gap-2 text-emerald-200/90 bg-emerald-500/5 border border-emerald-500/15 rounded-lg px-2.5 py-2">
+            <span class="text-emerald-400 font-bold mt-0.5">✓</span>
+            <span>${escapeHtml(msg)}</span>
+          </li>`),
+        ...item.diagnostics.warnings.map(msg => `
+          <li class="flex items-start gap-2 text-amber-200/90 bg-amber-500/5 border border-amber-500/15 rounded-lg px-2.5 py-2">
+            <span class="text-amber-400 font-bold mt-0.5">!</span>
+            <span>${escapeHtml(msg)}</span>
+          </li>`)
+      ].join('');
+      document.getElementById('diagnosticList').innerHTML = diagHtml || `<li class="text-slate-400">目前各項指標表現中性，無顯著異常訊號。</li>`;
+
+      // 風險規劃卡片
+      document.getElementById('planStrategy').textContent = item.plan.strategyText;
+      document.getElementById('planRangeHigh').textContent = `$${formatPrice(item.rangeHigh)}`;
+      document.getElementById('planRangeLow').textContent = `$${formatPrice(item.rangeLow)}`;
+      document.getElementById('planStopLoss').textContent = `$${formatPrice(item.plan.stopLoss)}`;
+      document.getElementById('planRiskPct').textContent = `距現價 -${item.plan.riskPct.toFixed(2)}%`;
+      document.getElementById('planTarget1').textContent = `$${formatPrice(item.plan.target1)}`;
+      document.getElementById('planRewardPct').textContent = `距現價 +${item.plan.rewardPct.toFixed(2)}%`;
+      document.getElementById('planRR').textContent = `1 : ${item.plan.rrRatio.toFixed(2)}`;
+
+      const derivSummary = item.hasFutures
+        ? `${(item.fundingRate * 100).toFixed(4)}% / OI ${item.oiChangePct !== null ? (item.oiChangePct >= 0 ? '+' : '') + item.oiChangePct.toFixed(1) + '%' : '--'}`
+        : '無 USDT 永續合約';
+      document.getElementById('planDerivatives').textContent = derivSummary;
+      document.getElementById('planRsMom').textContent = `${item.rsMom14Pct >= 0 ? '+' : ''}${item.rsMom14Pct.toFixed(2)}% (${item.rsTag})`;
+
+      // 渲染互動式雙圖表
+      requestAnimationFrame(() => renderDualCharts(item));
+    }
+
+    function closeDetailDrawer() {
+      document.getElementById('drawerBackdrop').classList.add('hidden');
+      document.getElementById('detailDrawer').classList.add('hidden');
+      document.body.style.overflow = '';
+      APP_STATE.selectedSymbol = null;
+      destroyCharts();
+    }
+
+    function renderDualCharts(item) {
+      destroyCharts();
+      const mainEl = document.getElementById('mainChartContainer');
+      const cvdEl = document.getElementById('cvdChartContainer');
+      mainEl.innerHTML = '';
+      cvdEl.innerHTML = '';
+
+      if (typeof window.LightweightCharts === 'undefined') {
+        const fallback = `<div class="h-full flex items-center justify-center text-xs text-slate-400 p-4 text-center">無法載入 Lightweight Charts CDN（請確認網路連線後重新整理頁面）</div>`;
+        mainEl.innerHTML = fallback;
+        cvdEl.innerHTML = fallback;
+        return;
+      }
+
+      const commonOptions = {
+        layout: {
+          background: { type: 'solid', color: '#0a0f1d' },
+          textColor: '#94a3b8',
+          fontSize: 11
+        },
+        grid: {
+          vertLines: { color: 'rgba(30, 41, 59, 0.5)' },
+          horzLines: { color: 'rgba(30, 41, 59, 0.5)' }
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal
+        },
+        rightPriceScale: {
+          borderColor: '#1e293b'
+        },
+        timeScale: {
+          borderColor: '#1e293b',
+          timeVisible: true,
+          secondsVisible: false
+        }
+      };
+
+      const mainChart = LightweightCharts.createChart(mainEl, {
+        ...commonOptions,
+        width: mainEl.clientWidth || 760,
+        height: 320
+      });
+
+      const cvdChart = LightweightCharts.createChart(cvdEl, {
+        ...commonOptions,
+        width: cvdEl.clientWidth || 760,
+        height: 145
+      });
+
+      const klines = item.series.klines;
+      const precision = item.price < 0.01 ? 7 : item.price < 1 ? 5 : item.price < 100 ? 3 : 2;
+      const minMove = Math.pow(10, -precision);
+
+      const candleSeries = mainChart.addCandlestickSeries({
+        upColor: '#10b981',
+        downColor: '#ef4444',
+        borderVisible: false,
+        wickUpColor: '#10b981',
+        wickDownColor: '#ef4444',
+        priceFormat: { type: 'price', precision, minMove }
+      });
+
+      candleSeries.setData(klines.map(k => ({
+        time: k.time, open: k.open, high: k.high, low: k.low, close: k.close
+      })));
+
+      // 威科夫區間水平參考線
+      if (Number.isFinite(item.rangeHigh) && item.rangeHigh > 0) {
+        candleSeries.createPriceLine({
+          price: item.rangeHigh,
+          color: '#10b981',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'RangeHigh'
+        });
+      }
+      if (Number.isFinite(item.rangeLow) && item.rangeLow > 0) {
+        candleSeries.createPriceLine({
+          price: item.rangeLow,
+          color: '#ef4444',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'RangeLow'
+        });
+      }
+
+      // Spring / LPS 標記
+      if (item.markerTime && item.markerText) {
+        candleSeries.setMarkers([{
+          time: item.markerTime,
+          position: item.wyckoffType === 'spring' ? 'belowBar' : 'aboveBar',
+          color: item.wyckoffType === 'spring' ? '#f59e0b' : '#06b6d4',
+          shape: item.wyckoffType === 'spring' ? 'arrowUp' : 'arrowDown',
+          text: item.markerText
+        }]);
+      }
+
+      // EMA 20 / 50 / 120
+      const showEma = document.getElementById('toggleEma').checked;
+      const emaSpecs = [
+        { arr: item.series.ema20, color: '#22d3ee' },
+        { arr: item.series.ema50, color: '#fbbf24' },
+        { arr: item.series.ema120, color: '#c084fc' }
+      ];
+      const emaSeriesList = emaSpecs.map(spec => {
+        const s = mainChart.addLineSeries({
+          color: spec.color,
+          lineWidth: 1.5,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          visible: showEma
+        });
+        s.setData(klines.map((k, i) => ({ time: k.time, value: spec.arr[i] })).filter(p => Number.isFinite(p.value)));
+        return s;
+      });
+
+      // 布林帶上下軌
+      const showBb = document.getElementById('toggleBb').checked;
+      const bbSeriesList = [item.series.bbUpper, item.series.bbLower].map(arr => {
+        const s = mainChart.addLineSeries({
+          color: 'rgba(56, 189, 248, 0.45)',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dotted,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          visible: showBb
+        });
+        s.setData(klines.map((k, i) => ({ time: k.time, value: arr[i] })).filter(p => Number.isFinite(p.value)));
+        return s;
+      });
+
+      // 副圖 Spot CVD
+      const cvdSeries = cvdChart.addAreaSeries({
+        topColor: 'rgba(6, 182, 212, 0.32)',
+        bottomColor: 'rgba(6, 182, 212, 0.02)',
+        lineColor: '#06b6d4',
+        lineWidth: 2,
+        priceLineVisible: false
+      });
+      cvdSeries.setData(klines.map(k => ({ time: k.time, value: k.cvd })));
+
+      mainChart.timeScale().fitContent();
+      cvdChart.timeScale().fitContent();
+
+      // 同步縮放與平移
+      let syncing = false;
+      mainChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        if (syncing || !range) return;
+        syncing = true;
+        cvdChart.timeScale().setVisibleLogicalRange(range);
+        syncing = false;
+      });
+      cvdChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        if (syncing || !range) return;
+        syncing = true;
+        mainChart.timeScale().setVisibleLogicalRange(range);
+        syncing = false;
+      });
+
+      // RWD 監聽
+      const ro = new ResizeObserver(() => {
+        if (mainEl.clientWidth > 0) {
+          mainChart.applyOptions({ width: mainEl.clientWidth });
+          cvdChart.applyOptions({ width: cvdEl.clientWidth });
+        }
+      });
+      ro.observe(mainEl);
+
+      APP_STATE.charts = {
+        main: mainChart,
+        cvd: cvdChart,
+        resizeObserver: ro,
+        emaSeries: emaSeriesList,
+        bbSeries: bbSeriesList
+      };
+    }
+
+    /* =========================================================================
+     * 6. WORKFLOW CONTROLLER — 全市場掃描、單幣查詢與 CSV 匯出
+     * ========================================================================= */
+    function setScanningUi(scanning) {
+      APP_STATE.isScanning = scanning;
+      const btn = document.getElementById('scanBtn');
+      const txt = document.getElementById('scanBtnText');
+      const icon = document.getElementById('scanIcon');
+      if (scanning) {
+        btn.className = 'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg transition';
+        txt.textContent = '停止掃描';
+        icon.classList.add('animate-spin');
+      } else {
+        btn.className = 'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 transition';
+        txt.textContent = APP_STATE.results.length > 0 ? '重新整理掃描' : '開始掃描';
+        icon.classList.remove('animate-spin');
+      }
+    }
+
+    async function runFullScan() {
+      if (APP_STATE.isScanning) {
+        if (APP_STATE.abortController) APP_STATE.abortController.abort();
+        return;
+      }
+
+      if (APP_STATE.isDemoMode) {
+        runDemoScan();
+        return;
+      }
+
+      showErrorBanner(false);
+      setScanningUi(true);
+      APP_STATE.abortController = new AbortController();
+      const signal = APP_STATE.abortController.signal;
+
+      try {
+        updateProgress(true, 4, `正在讀取 Binance 現貨成交額 Top ${APP_STATE.scope}、BTC 基準與全市場資金費率...`);
+
+        const [tickers, btcKlines, fundingRes] = await Promise.all([
+          fetchTopUsdtTickers(APP_STATE.scope, signal),
+          fetchSpotKlines('BTCUSDT', APP_STATE.timeframe, signal),
+          fetchFundingMap(signal)
+        ]);
+
+        if (!tickers.length || !btcKlines.length) {
+          throw new Error('回傳的市場行情資料為空');
+        }
+
+        APP_STATE.btcKlines = btcKlines;
+        APP_STATE.fundingMap = fundingRes.map;
+        APP_STATE.avgFundingRate = fundingRes.avgFundingRate;
+        updateMarketContext();
+
+        const results = [];
+        const total = tickers.length;
+        let completed = 0;
+
+        for (let i = 0; i < total; i += CONFIG.BATCH_CONCURRENCY) {
+          if (signal.aborted) break;
+          const batch = tickers.slice(i, i + CONFIG.BATCH_CONCURRENCY);
+
+          const batchScored = await Promise.all(batch.map(async (ticker) => {
+            try {
+              const klines = ticker.symbol === 'BTCUSDT'
+                ? btcKlines
+                : await fetchSpotKlines(ticker.symbol, APP_STATE.timeframe, signal);
+              if (!klines || klines.length < 30) return null;
+
+              const hasFutures = APP_STATE.fundingMap.has(ticker.symbol);
+              const fundingRate = hasFutures ? APP_STATE.fundingMap.get(ticker.symbol) : null;
+              const oiHist = hasFutures ? await fetchOpenInterestHist(ticker.symbol, APP_STATE.timeframe, signal) : null;
+
+              return scoreAsset({ ticker, klines, btcKlines, fundingRate, oiHist, hasFutures });
+            } catch (err) {
+              if (err.name === 'AbortError') throw err;
+              console.warn(`掃描 ${ticker.symbol} 失敗：`, err.message);
+              return null;
+            } finally {
+              completed++;
+              const pct = 10 + (completed / total) * 90;
+              updateProgress(true, pct, `掃描中 (${completed}/${total})：${ticker.symbol}`);
+            }
+          }));
+
+          for (const item of batchScored) {
+            if (item) results.push(item);
+          }
+
+          // 即時刷新表格讓使用者看到進度
+          APP_STATE.results = results;
+          updateKPIs();
+          renderTable();
+
+          if (i + CONFIG.BATCH_CONCURRENCY < total && !signal.aborted) {
+            await sleep(CONFIG.BATCH_DELAY_MS);
+          }
+        }
+
+        updateProgress(false);
+      } catch (err) {
+        updateProgress(false);
+        if (err.name !== 'AbortError') {
+          console.error('掃描發生錯誤：', err);
+          showErrorBanner(true, `連線 Binance API 失敗（${err.message}）。這通常發生於瀏覽器離線、網路限制或特定沙盒預覽環境；建議直接本機雙擊開啟，或點擊右側按鈕切換至「Demo 模擬數據」立即體驗完整功能。`);
+        }
+      } finally {
+        setScanningUi(false);
+        APP_STATE.abortController = null;
+      }
+    }
+
+    function runDemoScan() {
+      if (APP_STATE.isScanning && APP_STATE.abortController) {
+        APP_STATE.abortController.abort();
+      }
+      APP_STATE.isDemoMode = true;
+      updateModeBadge(true);
+      showErrorBanner(false);
+      updateProgress(true, 65, '正在產生四維共振模擬測試數據...');
+
+      setTimeout(() => {
+        const demo = generateDemoDataset(APP_STATE.timeframe);
+        APP_STATE.btcKlines = demo.btcKlines;
+        APP_STATE.fundingMap = demo.fundingMap;
+        APP_STATE.avgFundingRate = demo.avgFundingRate;
+        updateMarketContext();
+
+        APP_STATE.results = demo.items.map(it => {
+          const hasFutures = demo.fundingMap.has(it.ticker.symbol);
+          const fundingRate = hasFutures ? demo.fundingMap.get(it.ticker.symbol) : null;
+          return scoreAsset({
+            ticker: it.ticker,
+            klines: it.klines,
+            btcKlines: demo.btcKlines,
+            fundingRate,
+            oiHist: it.oiHist,
+            hasFutures
+          });
+        });
+
+        updateKPIs();
+        renderTable();
+        updateProgress(false);
+        setScanningUi(false);
+      }, 180);
+    }
+
+    async function handleSingleCoinLookup() {
+      const input = document.getElementById('singleCoinInput');
+      let raw = input.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!raw) return;
+      const symbol = raw.endsWith('USDT') ? raw : `${raw}USDT`;
+
+      // 若已在現有結果中，直接開啟詳情抽屜
+      const existing = APP_STATE.results.find(r => r.symbol === symbol);
+      if (existing) {
+        openDetailDrawer(symbol);
+        return;
+      }
+
+      if (APP_STATE.isDemoMode) {
+        alert(`目前處於模擬測試模式，清單中暫無 ${symbol}。可嘗試輸入 SOL、SUI、AAVE、TAO、PENDLE，或切回即時模式查詢全市場幣種。`);
+        return;
+      }
+
+      const btn = document.getElementById('singleCoinBtn');
+      const oldText = btn.textContent;
+      btn.textContent = '查詢中...';
+      btn.disabled = true;
+
+      try {
+        showErrorBanner(false);
+        if (!APP_STATE.btcKlines.length) {
+          APP_STATE.btcKlines = await fetchSpotKlines('BTCUSDT', APP_STATE.timeframe);
+        }
+        if (APP_STATE.fundingMap.size === 0) {
+          const fRes = await fetchFundingMap();
+          APP_STATE.fundingMap = fRes.map;
+          APP_STATE.avgFundingRate = fRes.avgFundingRate;
+          updateMarketContext();
+        }
+
+        const [ticker, klines] = await Promise.all([
+          fetchSingleTicker(symbol),
+          fetchSpotKlines(symbol, APP_STATE.timeframe)
+        ]);
+        const hasFutures = APP_STATE.fundingMap.has(symbol);
+        const fundingRate = hasFutures ? APP_STATE.fundingMap.get(symbol) : null;
+        const oiHist = hasFutures ? await fetchOpenInterestHist(symbol, APP_STATE.timeframe) : null;
+
+        const scored = scoreAsset({
+          ticker,
+          klines,
+          btcKlines: APP_STATE.btcKlines,
+          fundingRate,
+          oiHist,
+          hasFutures
+        });
+
+        APP_STATE.results = [scored, ...APP_STATE.results.filter(r => r.symbol !== symbol)];
+        updateKPIs();
+        renderTable();
+        openDetailDrawer(symbol);
+      } catch (err) {
+        showErrorBanner(true, `單幣查詢 ${symbol} 失敗：${err.message}。請確認 Binance 現貨市場存在此 USDT 交易對，或切換至模擬模式測試。`);
+      } finally {
+        btn.textContent = oldText;
+        btn.disabled = false;
+      }
+    }
+
+    function exportHighScoreCsv() {
+      const list = getFilteredSortedResults();
+      if (!list.length) return;
+
+      const headers = [
+        '幣種', '時間週期', '最新價', '24H漲跌幅(%)', '四維總分', '評級',
+        '威科夫結構', '威科夫得分', 'BBW壓縮百分位(%)', '均線價差(%)',
+        '現貨CVD狀態', '資金費率(%)', 'OI變化率(%)', '對BTC強弱',
+        '區間下緣', '區間上緣', '建議結構止損', '第一目標位', '預估R:R'
+      ];
+
+      const rows = list.map(r => [
+        r.symbol,
+        APP_STATE.timeframe.toUpperCase(),
+        r.price,
+        r.change24h.toFixed(2),
+        r.totalScore,
+        r.tierLabel,
+        r.wyckoffTag,
+        r.wyckoffScore,
+        r.bbwPercentile.toFixed(1),
+        r.emaSpreadPct.toFixed(2),
+        r.cvdTag,
+        r.hasFutures ? (r.fundingRate * 100).toFixed(4) : '無合約數據',
+        r.oiChangePct !== null ? r.oiChangePct.toFixed(2) : '--',
+        r.rsTag,
+        r.rangeLow,
+        r.rangeHigh,
+        r.plan.stopLoss,
+        r.plan.target1,
+        r.plan.rrRatio.toFixed(2)
+      ]);
+
+      const csvContent = '\uFEFF' + [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateTag = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `crypto_4d_radar_${APP_STATE.timeframe}_${dateTag}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /* =========================================================================
+     * 7. EVENT BINDINGS — 介面互動綁定與初始化
+     * ========================================================================= */
+    function initEvents() {
+      // 時間週期切換
+      document.querySelectorAll('.tf-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tf = btn.dataset.tf;
+          if (tf === APP_STATE.timeframe) return;
+          APP_STATE.timeframe = tf;
+          document.querySelectorAll('.tf-btn').forEach(b => {
+            const active = b.dataset.tf === tf;
+            b.className = active
+              ? 'tf-btn px-3 py-1.5 rounded-md font-semibold transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+              : 'tf-btn px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 transition border border-transparent';
+          });
+          if (APP_STATE.results.length > 0) {
+            if (APP_STATE.isDemoMode) runDemoScan();
+            else runFullScan();
+          }
+        });
+      });
+
+      // 掃描範圍
+      document.getElementById('scopeSelect').addEventListener('change', (e) => {
+        APP_STATE.scope = Number(e.target.value) || 50;
+      });
+
+      // 開始 / 停止掃描
+      document.getElementById('scanBtn').addEventListener('click', () => {
+        if (APP_STATE.isDemoMode && !APP_STATE.isScanning) {
+          APP_STATE.isDemoMode = false;
+          updateModeBadge(false);
+        }
+        runFullScan();
+      });
+
+      // 切換 Demo 模式
+      document.getElementById('demoModeBtn').addEventListener('click', () => runDemoScan());
+      document.getElementById('bannerDemoBtn').addEventListener('click', () => runDemoScan());
+
+      // 單幣快查
+      document.getElementById('singleCoinBtn').addEventListener('click', handleSingleCoinLookup);
+      document.getElementById('singleCoinInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSingleCoinLookup();
+      });
+
+      // 匯出 CSV
+      document.getElementById('exportCsvBtn').addEventListener('click', exportHighScoreCsv);
+
+      // 濾鏡標籤
+      document.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          APP_STATE.activeFilter = btn.dataset.filter;
+          document.querySelectorAll('.filter-pill').forEach(p => {
+            const active = p.dataset.filter === APP_STATE.activeFilter;
+            p.className = active
+              ? 'filter-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition'
+              : 'filter-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-slate-500 transition';
+          });
+          renderTable();
+        });
+      });
+
+      // 表格搜尋
+      document.getElementById('tableSearchInput').addEventListener('input', (e) => {
+        APP_STATE.searchQuery = e.target.value;
+        renderTable();
+      });
+
+      // 欄位排序
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.sort;
+          if (APP_STATE.sortBy === key) {
+            APP_STATE.sortDir = APP_STATE.sortDir === 'desc' ? 'asc' : 'desc';
+          } else {
+            APP_STATE.sortBy = key;
+            APP_STATE.sortDir = key === 'symbol' || key === 'bbwPercentile' ? 'asc' : 'desc';
+          }
+          document.querySelectorAll('th.sortable .sort-ind').forEach(el => { el.textContent = ''; });
+          const ind = th.querySelector('.sort-ind');
+          if (ind) ind.textContent = APP_STATE.sortDir === 'desc' ? '▼' : '▲';
+          renderTable();
+        });
+      });
+
+      // 詳情抽屜關閉與疊加層開關
+      document.getElementById('closeDrawerBtn').addEventListener('click', closeDetailDrawer);
+      document.getElementById('drawerBackdrop').addEventListener('click', closeDetailDrawer);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && APP_STATE.selectedSymbol) closeDetailDrawer();
+      });
+
+      document.getElementById('toggleEma').addEventListener('change', (e) => {
+        APP_STATE.charts.emaSeries.forEach(s => s.applyOptions({ visible: e.target.checked }));
+      });
+      document.getElementById('toggleBb').addEventListener('change', (e) => {
+        APP_STATE.charts.bbSeries.forEach(s => s.applyOptions({ visible: e.target.checked }));
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initEvents();
+      // 啟動後自動嘗試即時掃描 Top 50，若網路/CORS 受阻將顯示提示並可一鍵切換 Demo Mode
+      runFullScan();
+    });
+  </script>
+</body>
+</html>
